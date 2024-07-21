@@ -1,17 +1,17 @@
-package service_test
+package services_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
-	"wallet/transaction/internal/domain/service"
+	"wallet/transaction/internal/domain/services"
 	"wallet/transaction/internal/domain/vo"
 )
 
 var _ = Describe("Transaction service", func() {
 	var (
-		transactionProcessor service.TransactionProcessor
+		transactionProcessor services.TransactionProcessor
 		transactionRepo      *repositories.TransactionRepository
 		balanceRepo          *repositories.BalanceRepository
 	)
@@ -19,7 +19,7 @@ var _ = Describe("Transaction service", func() {
 	BeforeEach(func() {
 		transactionRepo = repositories.NewTransactionRepository(DB)
 		balanceRepo = repositories.NewBalanceRepository(DB)
-		transactionProcessor = service.NewTransactionProcessor(DB)
+		transactionProcessor = services.NewTransactionProcessor(DB)
 	})
 
 	Describe("Processing transactions", func() {

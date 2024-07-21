@@ -1,4 +1,4 @@
-package service_test
+package services_test
 
 import (
 	"github.com/google/uuid"
@@ -6,15 +6,15 @@ import (
 	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
-	"wallet/transaction/internal/domain/service"
+	"wallet/transaction/internal/domain/services"
 	"wallet/transaction/internal/domain/vo"
 )
 
 var _ = Describe("check balance initialization and providing", func() {
-	var balanceService *service.Balance
+	var balanceService *services.Balance
 
 	BeforeEach(func() {
-		balanceService = service.NewBalanceService(DB)
+		balanceService = services.NewBalanceService(DB)
 	})
 
 	Context("balance does not exists", func() {
@@ -89,10 +89,10 @@ var _ = Describe("check balance initialization and providing", func() {
 })
 
 var _ = Describe("check balance updating", func() {
-	var balanceService *service.Balance
+	var balanceService *services.Balance
 
 	BeforeEach(func() {
-		balanceService = service.NewBalanceService(DB)
+		balanceService = services.NewBalanceService(DB)
 	})
 
 	Context("balance are zero", func() {

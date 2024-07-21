@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 	"time"
 	"wallet/transaction/internal/domain/repositories"
-	"wallet/transaction/internal/domain/service"
+	"wallet/transaction/internal/domain/services"
 	txdb "wallet/transaction/internal/infrastructure/db"
 )
 
@@ -74,7 +74,7 @@ func (c CorrectionWorker) Execute() error {
 // NewCorrectionWorker returns CorrectionWorker instance.
 func NewCorrectionWorker(db *gorm.DB) CorrectionWorker {
 	return CorrectionWorker{
-		CorrectionInitializer: service.NewCorrectionInitializer(db),
+		CorrectionInitializer: services.NewCorrectionInitializer(db),
 		cRepo:                 repositories.NewCorrectionRepository(db),
 	}
 }

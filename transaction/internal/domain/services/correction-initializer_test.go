@@ -1,22 +1,22 @@
-package service_test
+package services_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
-	"wallet/transaction/internal/domain/service"
+	"wallet/transaction/internal/domain/services"
 )
 
 var _ = Describe("correction initializer", func() {
 	var (
-		correctionInitializer service.CorrectionInitializer
+		correctionInitializer services.CorrectionInitializer
 		//transactionRepo       *repositories.TransactionRepository
 		correctionnRepo *repositories.CorrectionRepository
 	)
 
 	BeforeEach(func() {
-		correctionInitializer = service.NewCorrectionInitializer(DB)
+		correctionInitializer = services.NewCorrectionInitializer(DB)
 		//transactionRepo = repositories.NewTransactionRepository(DB)
 		correctionnRepo = repositories.NewCorrectionRepository(DB)
 	})

@@ -1,11 +1,11 @@
-package service_test
+package services_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
-	"wallet/transaction/internal/domain/service"
+	"wallet/transaction/internal/domain/services"
 	"wallet/transaction/internal/domain/vo"
 )
 
@@ -36,7 +36,7 @@ var _ = Describe("Balance Correction", func() {
 
 			When("correction are processed", func() {
 				BeforeEach(func() {
-					err := service.NewCorrectionProcessor(DB).Execute(correction)
+					err := services.NewCorrectionProcessor(DB).Execute(correction)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -67,7 +67,7 @@ var _ = Describe("Balance Correction", func() {
 
 			When("correction are processed", func() {
 				BeforeEach(func() {
-					err := service.NewCorrectionProcessor(DB).Execute(correction)
+					err := services.NewCorrectionProcessor(DB).Execute(correction)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -99,7 +99,7 @@ var _ = Describe("Balance Correction", func() {
 
 			When("correction are processed", func() {
 				BeforeEach(func() {
-					err := service.NewCorrectionProcessor(DB).Execute(correction)
+					err := services.NewCorrectionProcessor(DB).Execute(correction)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -132,7 +132,7 @@ var _ = Describe("Balance Correction", func() {
 
 			When("correction are processed", func() {
 				BeforeEach(func() {
-					err := service.NewCorrectionProcessor(DB).Execute(correction)
+					err := services.NewCorrectionProcessor(DB).Execute(correction)
 					Expect(err).ToNot(HaveOccurred())
 				})
 

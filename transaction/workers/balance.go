@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
-	"wallet/transaction/internal/domain/service"
+	"wallet/transaction/internal/domain/services"
 	txdb "wallet/transaction/internal/infrastructure/db"
 )
 
@@ -103,7 +103,7 @@ func NewBalanceWorker(db *gorm.DB) BalanceWorker {
 	return BalanceWorker{
 		repo:                 repositories.NewCorrectionRepository(db),
 		txRepo:               repositories.NewTransactionRepository(db),
-		CorrectionProcessor:  service.NewCorrectionProcessor(db),
-		TransactionProcessor: service.NewTransactionProcessor(db),
+		CorrectionProcessor:  services.NewCorrectionProcessor(db),
+		TransactionProcessor: services.NewTransactionProcessor(db),
 	}
 }

@@ -12,19 +12,21 @@ var _ = Describe("transaction сreation", func() {
 	Context("there are no existing transactions in the system", func() {
 		When("a signal to create a transaction is received", func() {
 			var (
-				responseCode int
-				repo         *repositories.TransactionRepository
+				responseCode  int
+				repo          *repositories.TransactionRepository
+				transactionId string
 			)
 
 			BeforeEach(func() {
-				responseCode = createTx(uuid.New(), 10, entities.Win)
+				transactionId = uuid.New().String()
+				responseCode = createTx(transactionId, 10, entities.Win)
 				repo = repositories.NewTransactionRepository(DB)
 			})
 
 			It("should successfully save the transaction", func() {
 				transaction, err := repo.GetNextTransaction()
 
-				Expect(transaction).ToNot(BeNil())
+				Expect(transaction.ID).To(Equal(transactionId))
 				Expect(err).NotTo(HaveOccurred())
 			})
 

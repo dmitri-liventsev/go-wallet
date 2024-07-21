@@ -4,20 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"net/http"
 	"wallet/transaction/internal/domain/entities"
 )
 
-func createTx(txID uuid.UUID, amount float64, action string) int {
+func createTx(txID string, amount float64, action string) int {
 	GinkgoHelper()
 
 	payload := map[string]string{
 		"state":         action,
 		"amount":        fmt.Sprintf("%.2f", amount),
-		"transactionId": txID.String(),
+		"transactionId": txID,
 	}
 
 	jsonPayload, err := json.Marshal(payload)

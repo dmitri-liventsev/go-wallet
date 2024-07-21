@@ -39,10 +39,6 @@ func connectToTestDB(ctx context.Context) *gorm.DB {
 	return gormdb
 }
 
-var _ = BeforeEach(func() {
-	db.Truncate(DB)
-})
-
 func runServer() {
 	format := log.FormatJSON
 	ctx := log.Context(context.Background(), log.WithFormat(format))

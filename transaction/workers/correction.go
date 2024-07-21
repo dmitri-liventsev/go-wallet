@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"goa.design/clue/log"
 	"gorm.io/gorm"
 	"time"
@@ -12,7 +13,7 @@ import (
 
 // RunCorrectionWorker starts a background goroutine that continuously executes the correction worker, handling
 // transactions and rolling back on errors until the context is done.
-func RunCorrectionWorker(ctx context.Context, db *gorm.DB) {
+func runCorrectionWorker(ctx context.Context, db *gorm.DB) {
 	go func(ctx context.Context) {
 		for {
 			select {
@@ -30,6 +31,18 @@ func RunCorrectionWorker(ctx context.Context, db *gorm.DB) {
 			}
 		}
 	}(ctx)
+}
+
+func RunCorrectionWorker(ctx context.Context, db *gorm.DB) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Fatalf(ctx, fmt.Errorf("Recovered in goroutine: %v", r), "recovering from panic")
+			}
+		}()
+
+		runCorrectionWorker(ctx, db)
+	}()
 }
 
 // CorrectionInitializer create a new correction order

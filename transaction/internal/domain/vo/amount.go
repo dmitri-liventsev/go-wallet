@@ -53,6 +53,11 @@ func (a *Amount) Scan(value interface{}) error {
 	return nil
 }
 
+// LessThenZero returns true if the TotalAmount is less than zero, otherwise false.
+func (t *Amount) LessThenZero() bool {
+	return t.Cents < 0
+}
+
 // NewAmountFromString creates a new Amount from a string representation, returning an error if the string cannot be parsed.
 func NewAmountFromString(amount string) (Amount, error) {
 	amountFloat, err := strconv.ParseFloat(amount, 64)

@@ -63,7 +63,7 @@ func (b *Balance) UpdateBalance(amount vo.Amount) error {
 	}
 
 	balance.Value = balance.Value.AddAmount(amount)
-	if balance.Value.LessThanZero() {
+	if balance.Value.LessThanZero() && amount.LessThenZero() {
 		return ErrNegativeBalance
 	}
 

@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-type UuidList []string
+type StringList []string
 
-func (p *UuidList) Scan(val interface{}) error {
+func (p *StringList) Scan(val interface{}) error {
 	switch v := val.(type) {
 	case []byte:
 		return json.Unmarshal(v, p)
@@ -19,6 +19,6 @@ func (p *UuidList) Scan(val interface{}) error {
 	}
 }
 
-func (p UuidList) Value() (driver.Value, error) {
+func (p StringList) Value() (driver.Value, error) {
 	return json.Marshal(p)
 }

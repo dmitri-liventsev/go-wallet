@@ -9,8 +9,8 @@ import (
 
 // Correction represents the Correction entity, which is a scheduled operation for reversing a list of transactions.
 type Correction struct {
-	ID             uuid.UUID   `gorm:"type:uuid;primaryKey"`
-	TransactionIDs vo.UuidList `gorm:"type:jsonb"`
+	ID             uuid.UUID     `gorm:"type:uuid;primaryKey"`
+	TransactionIDs vo.StringList `gorm:"type:jsonb"`
 	DoneAt         *time.Time
 	CreatedAt      time.Time `gorm:"type:timestamptz;default:current_timestamp"`
 	UpdatedAt      time.Time `gorm:"type:timestamptz;default:current_timestamp"`

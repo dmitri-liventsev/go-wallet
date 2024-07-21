@@ -18,8 +18,8 @@ This project provides a service for managing user balances, allowing users to re
 ### Clone the Repository
 
 ```bash
-git clone <repository_url>
-cd <repository_name>
+git clone git@github.com:dmitri-liventsev/go-wallet.git
+cd go-wallet
 ```
 
 ## Start the Services

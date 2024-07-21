@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+
+  web:
+    build:
+      context: .
+      dockerfile: transaction/cmd/Dockerfile
+    container_name: web
+    volumes:
+      - .:/app
+    command: ["air"]
+    environment:
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=txdb
+      - DB_HOST=db
+      - DB_PORT=5432
+    ports:
+      - "80:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:13
+    container_name: postgres_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: txdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      retries: 5
+
+volumes:
+  postgres_data:

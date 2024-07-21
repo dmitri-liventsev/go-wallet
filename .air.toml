@@ -1,0 +1,8 @@
+# Включаем watch mode
+watch_mode = "full"
+
+[build]
+  include_ext = ["go"]
+  src_dir = "transaction/cmd"
+[runner]
+  cmd = "go run main.go -debug=true"

@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-type StringList []string
+type TransactionIds []string
 
-func (p *StringList) Scan(val interface{}) error {
+func (p *TransactionIds) Scan(val interface{}) error {
 	switch v := val.(type) {
 	case []byte:
 		return json.Unmarshal(v, p)
@@ -19,6 +19,6 @@ func (p *StringList) Scan(val interface{}) error {
 	}
 }
 
-func (p StringList) Value() (driver.Value, error) {
+func (p TransactionIds) Value() (driver.Value, error) {
 	return json.Marshal(p)
 }

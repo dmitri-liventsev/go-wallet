@@ -36,6 +36,18 @@ func (c *Correction) GetTransactionIDs() ([]uuid.UUID, error) {
 	return ids, nil
 }
 
+// IsOutOFDate returns true if correction is too old
+func (c *Correction) IsOutOFDate() bool {
+	if c.DoneAt == nil {
+		return false
+	}
+
+	doneUnix := c.DoneAt.Unix()
+	nowUnix := time.Now().Unix()
+
+	return nowUnix-doneUnix > 600
+}
+
 // NewCorrection returns new Correction entity instance.
 func NewCorrection(transactionIDs []string) *Correction {
 	return &Correction{

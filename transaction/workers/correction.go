@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"goa.design/clue/log"
 	"gorm.io/gorm"
-	"time"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/services"
 	txdb "wallet/transaction/internal/infrastructure/db"
@@ -65,16 +64,9 @@ func (c CorrectionWorker) Execute() error {
 		return err
 	}
 
-	newCorrectionIsOutOfDate := false
-	if newestCorrection != nil && newestCorrection.DoneAt != nil {
-		doneUnix := newestCorrection.DoneAt.Unix()
-		nowUnix := time.Now().Unix()
-		newCorrectionIsOutOfDate = nowUnix-doneUnix > 600
-	}
-
 	// If there are no correction yet (system just started) or if newest correction are processed already,
 	// and it was more than 10 min ago
-	if newestCorrection == nil || newCorrectionIsOutOfDate {
+	if newestCorrection == nil || newestCorrection.IsOutOFDate() {
 		err := c.CorrectionInitializer.Execute()
 		if err != nil {
 			return err

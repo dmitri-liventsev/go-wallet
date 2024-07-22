@@ -2,7 +2,6 @@ package workers
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 	"goa.design/clue/log"
 	"gorm.io/gorm"
@@ -15,18 +14,6 @@ import (
 // RunBalanceWorker starts a background goroutine that continuously executes the balance worker,
 // handling transactions and rolling back on errors until the context is done.
 func RunBalanceWorker(ctx context.Context, db *gorm.DB) {
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Fatalf(ctx, fmt.Errorf("recovered in goroutine: %v", r), "recovering from panic")
-			}
-		}()
-
-		runBalanceWorker(ctx, db)
-	}()
-}
-
-func runBalanceWorker(ctx context.Context, db *gorm.DB) {
 	go func(ctx context.Context) {
 		for {
 			select {

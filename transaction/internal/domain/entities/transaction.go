@@ -43,18 +43,18 @@ type Transaction struct {
 
 // MarkAsDone mark Transaction as done.
 func (t *Transaction) MarkAsDone() {
-	t.Status = "done"
+	t.Status = Done
 }
 
 // MarkAsCancelled mark Transaction as cancelled
 func (t *Transaction) MarkAsCancelled() {
-	t.Status = "cancelled"
+	t.Status = Cancelled
 }
 
 // NewTransaction returns new Transaction entity.
 func NewTransaction(id string, amount vo.Amount, action string, sourceType string) *Transaction {
 	return &Transaction{
-		Status:     "new",
+		Status:     New,
 		Action:     action,
 		SourceType: sourceType,
 		Amount:     amount,

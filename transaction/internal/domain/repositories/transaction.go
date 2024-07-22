@@ -62,7 +62,7 @@ func (repo TransactionRepository) FindByIDs(ids []string) ([]entities.Transactio
 func (repo TransactionRepository) GetNextTransaction() (*entities.Transaction, error) {
 	var transaction entities.Transaction
 
-	if err := repo.db.Where("status = ?", "new").Order("created_at ASC").Limit(1).First(&transaction).Error; err != nil {
+	if err := repo.db.Where("status = ?", entities.New).Order("created_at ASC").Limit(1).First(&transaction).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -86,7 +86,7 @@ func (repo TransactionRepository) GetLastOddTransactions(limit int) ([]entities.
 	var transactions []entities.Transaction
 	err := repo.db.
 		Table("transactions").
-		Where("status IN (?, ?)", "new", "done").
+		Where("status IN (?, ?)", entities.New, entities.Done).
 		Order("created_at DESC").
 		Limit(limit * 2).
 		Find(&transactions).Error
@@ -109,7 +109,7 @@ func (repo TransactionRepository) CalculateBalance() (int64, error) {
 	var totalAmount *int64
 
 	result := repo.db.Model(&entities.Transaction{}).
-		Where("status = ?", "done").
+		Where("status = ?", entities.Done).
 		Select("SUM(amount)").
 		Scan(&totalAmount)
 

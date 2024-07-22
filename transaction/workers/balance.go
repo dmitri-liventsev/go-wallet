@@ -18,7 +18,7 @@ func RunBalanceWorker(ctx context.Context, db *gorm.DB) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Fatalf(ctx, fmt.Errorf("Recovered in goroutine: %v", r), "recovering from panic")
+				log.Fatalf(ctx, fmt.Errorf("recovered in goroutine: %v", r), "recovering from panic")
 			}
 		}()
 

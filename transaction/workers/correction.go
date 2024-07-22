@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"goa.design/clue/log"
 	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/repositories"
@@ -16,7 +17,7 @@ func RunCorrectionWorker(ctx context.Context, db *gorm.DB) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Fatalf(ctx, fmt.Errorf("Recovered in goroutine: %v", r), "recovering from panic")
+				log.Fatalf(ctx, fmt.Errorf("recovered in goroutine: %v", r), "recovering from panic")
 			}
 		}()
 
@@ -61,7 +62,7 @@ type CorrectionWorker struct {
 func (c CorrectionWorker) Execute() error {
 	newestCorrection, err := c.cRepo.GetNewestCorrection()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "cannot GetNewestCorrection")
 	}
 
 	// If there are no correction yet (system just started) or if newest correction are processed already,
@@ -69,7 +70,7 @@ func (c CorrectionWorker) Execute() error {
 	if newestCorrection == nil || newestCorrection.IsOutOFDate() {
 		err := c.CorrectionInitializer.Execute()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "cant create a new correction")
 		}
 	}
 

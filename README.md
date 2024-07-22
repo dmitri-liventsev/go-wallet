@@ -30,7 +30,7 @@ docker-compose up -d
 ```
 
 ## API Documentation
-Once the services are up and running, you can access the Wallet API documentation. The API follows the OpenAPI 3.0.3 specification. The OpenAPI yaml file can be found in the **gen/http** directory.
+The API follows the OpenAPI 3.0.3 specification. The OpenAPI yaml file can be found in the **gen/http** directory.
 
 ## API Endpoints
 ### Create Transaction

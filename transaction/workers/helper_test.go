@@ -20,6 +20,7 @@ func createTransactionWithStatus(amount int, status string) *entities.Transactio
 	action := entities.Win
 	if amount < 0 {
 		action = entities.Lost
+		amount *= -1
 	}
 
 	transactionRepo := repositories.NewTransactionRepository(DB)

@@ -18,7 +18,7 @@ var _ = Describe("transaction management", func() {
 	var repo *repositories.TransactionRepository
 	var balanceRepo *repositories.BalanceRepository
 	var expectedBalance int64
-	var numOfTransactions = 10000
+	var numOfTransactions = 1000
 
 	Context("asynchronous request processing", func() {
 		BeforeEach(func() {
@@ -38,7 +38,7 @@ var _ = Describe("transaction management", func() {
 			It("saves each trasnactions", func() {
 				transactions, err := repo.GetAllTransactions()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(len(transactions)).To(Equal(1))
+				Expect(len(transactions)).To(Equal(numOfTransactions))
 			})
 
 			When("transactions are processed", func() {

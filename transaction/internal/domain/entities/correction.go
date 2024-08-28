@@ -1,39 +1,34 @@
 package entities
 
 import (
-	"fmt"
 	"github.com/google/uuid"
 	"time"
-	"wallet/transaction/internal/domain/vo"
 )
+
+const Ready = "ready"
 
 // Correction represents the Correction entity, which is a scheduled operation for reversing a list of transactions.
 type Correction struct {
-	ID             uuid.UUID         `gorm:"type:uuid;primaryKey"`
-	TransactionIDs vo.TransactionIds `gorm:"type:jsonb"`
-	DoneAt         *time.Time
-	CreatedAt      time.Time `gorm:"type:timestamptz;default:current_timestamp"`
-	UpdatedAt      time.Time `gorm:"type:timestamptz;default:current_timestamp"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	DoneAt    *time.Time
+	Status    string     `gorm:"type:varchar(10);check:status IN ('ready', 'locked');index"`
+	LockUuid  *uuid.UUID `gorm:"type:uuid;default:null"`
+	LockedAt  *time.Time `gorm:"type:timestamptz;default:null"`
+	CreatedAt time.Time  `gorm:"type:timestamptz;default:current_timestamp"`
+	UpdatedAt time.Time  `gorm:"type:timestamptz;default:current_timestamp"`
 }
 
 // MarkAsDone mark correction as done.
 func (c *Correction) MarkAsDone() {
 	now := time.Now()
 	c.DoneAt = &now
+	c.LockUuid = nil
 }
 
-// GetTransactionIDs returns transaction ids.
-func (c *Correction) GetTransactionIDs() ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	for _, idStr := range c.TransactionIDs {
-		id, err := uuid.Parse(idStr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid UUID string %s: %w", idStr, err)
-		}
-		ids = append(ids, id)
-	}
-
-	return ids, nil
+func (c *Correction) Lock(lockUuid uuid.UUID) {
+	c.Status = Locked
+	c.LockUuid = &lockUuid
+	*c.LockedAt = time.Now()
 }
 
 // IsOutOFDate returns true if correction is too old
@@ -49,9 +44,14 @@ func (c *Correction) IsOutOFDate() bool {
 }
 
 // NewCorrection returns new Correction entity instance.
-func NewCorrection(transactionIDs []string) *Correction {
+func NewCorrection(id uuid.UUID) *Correction {
+	now := time.Now()
+	lockUuid := uuid.New()
 	return &Correction{
-		ID:             uuid.New(),
-		TransactionIDs: transactionIDs,
+		ID:     id,
+		Status: Ready,
+		// avoid correction on service starting:
+		LockedAt: &now,
+		LockUuid: &lockUuid,
 	}
 }

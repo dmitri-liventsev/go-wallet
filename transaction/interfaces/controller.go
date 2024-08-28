@@ -6,7 +6,6 @@ import (
 	balancesvc "wallet/gen/transaction"
 	txsvc "wallet/gen/transaction"
 	"wallet/transaction"
-	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/vo"
 )
@@ -19,9 +18,6 @@ func (t txController) Create(ctx context.Context, payload *balancesvc.CreatePayl
 	amount, err := vo.NewAmountFromString(payload.Amount)
 	if err != nil {
 		return err
-	}
-	if payload.State == entities.Lost {
-		amount = amount.Inverse()
 	}
 
 	command := transaction.AddTransaction{

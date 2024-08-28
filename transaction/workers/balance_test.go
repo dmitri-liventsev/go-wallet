@@ -2,10 +2,10 @@ package workers_test
 
 import (
 	"github.com/golang/mock/gomock"
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
-	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/workers"
 	"wallet/transaction/workers/internal/mocks"
 )
@@ -67,91 +67,107 @@ var _ = Describe("balance worker processing", func() {
 		})
 	})
 
-	Context("an unprocessed correction does not exists", func() {
+	Context("transaction was locked by another process", func() {
+		var lockUuid uuid.UUID
+
+		BeforeEach(func() {
+			lockUuid = uuid.New()
+			createLockedTransaction(&lockUuid)
+		})
+
 		When("the worker starts", func() {
 			var (
-				balanceWorker           workers.BalanceWorker
-				ctrl                    *gomock.Controller
-				mockCorrectionProcessor *mocks.MockCorrectionProcessor
+				balanceWorker            workers.BalanceWorker
+				ctrl                     *gomock.Controller
+				mockTransactionProcessor *mocks.MockTransactionProcessor
 			)
 
 			BeforeEach(func() {
 				ctrl = gomock.NewController(GinkgoT())
 				DeferCleanup(func() { ctrl.Finish() })
 
-				mockCorrectionProcessor = mocks.NewMockCorrectionProcessor(ctrl)
+				mockTransactionProcessor = mocks.NewMockTransactionProcessor(ctrl)
 				balanceWorker = workers.NewBalanceWorker(DB)
-				balanceWorker.CorrectionProcessor = mockCorrectionProcessor
+				balanceWorker.TransactionProcessor = mockTransactionProcessor
 			})
 
-			It("the correctionProcessor should not be called", func() {
-				mockCorrectionProcessor.EXPECT().Execute(gomock.Any()).Times(0)
+			It("the transactionProcessor should not be called", func() {
+				mockTransactionProcessor.EXPECT().Execute(gomock.Any()).Times(0)
 				err := balanceWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 	})
 
-	Context("an processed correction exists", func() {
+	Context("transaction was locked by same process before", func() {
+		var (
+			lockUuid    uuid.UUID
+			transaction *entities.Transaction
+		)
+
 		BeforeEach(func() {
-			transaction := createTransaction(1)
-			correction := entities.NewCorrection([]string{transaction.ID})
-			correction.MarkAsDone()
-			err := repositories.NewCorrectionRepository(DB).Save(correction)
-			Expect(err).ToNot(HaveOccurred())
+			lockUuid = uuid.New()
+			transaction = createLockedTransaction(&lockUuid)
 		})
 
 		When("the worker starts", func() {
 			var (
-				balanceWorker           workers.BalanceWorker
-				ctrl                    *gomock.Controller
-				mockCorrectionProcessor *mocks.MockCorrectionProcessor
+				balanceWorker            workers.BalanceWorker
+				ctrl                     *gomock.Controller
+				mockTransactionProcessor *mocks.MockTransactionProcessor
 			)
 
 			BeforeEach(func() {
 				ctrl = gomock.NewController(GinkgoT())
 				DeferCleanup(func() { ctrl.Finish() })
 
-				mockCorrectionProcessor = mocks.NewMockCorrectionProcessor(ctrl)
+				mockTransactionProcessor = mocks.NewMockTransactionProcessor(ctrl)
 				balanceWorker = workers.NewBalanceWorker(DB)
-				balanceWorker.CorrectionProcessor = mockCorrectionProcessor
+				balanceWorker.TransactionProcessor = mockTransactionProcessor
+				balanceWorker.LockUuid = lockUuid
 			})
 
-			It("the correctionProcessor should not be called", func() {
-				mockCorrectionProcessor.EXPECT().Execute(gomock.Any()).Times(0)
+			It("the transactionProcessor should be called", func() {
+				mockTransactionProcessor.EXPECT().Execute(transaction)
 				err := balanceWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 	})
 
-	Context("an unprocessed correction exists", func() {
-		var correction *entities.Correction
+	Context("three transaction are locked, transaction in the middle are locked by another process", func() {
+		var (
+			lockUuid    uuid.UUID
+			transaction *entities.Transaction
+		)
+
 		BeforeEach(func() {
-			transaction := createTransaction(1)
-			correction = entities.NewCorrection([]string{transaction.ID})
-			err := repositories.NewCorrectionRepository(DB).Save(correction)
-			Expect(err).ToNot(HaveOccurred())
+			lockUuid = uuid.New()
+			transaction = createLockedTransaction(&lockUuid)
+			randomUuid := uuid.New()
+			_ = createLockedTransaction(&randomUuid)
+			_ = createLockedTransaction(&lockUuid)
 		})
 
 		When("the worker starts", func() {
 			var (
-				balanceWorker           workers.BalanceWorker
-				ctrl                    *gomock.Controller
-				mockCorrectionProcessor *mocks.MockCorrectionProcessor
+				balanceWorker            workers.BalanceWorker
+				ctrl                     *gomock.Controller
+				mockTransactionProcessor *mocks.MockTransactionProcessor
 			)
 
 			BeforeEach(func() {
 				ctrl = gomock.NewController(GinkgoT())
 				DeferCleanup(func() { ctrl.Finish() })
 
-				mockCorrectionProcessor = mocks.NewMockCorrectionProcessor(ctrl)
+				mockTransactionProcessor = mocks.NewMockTransactionProcessor(ctrl)
 				balanceWorker = workers.NewBalanceWorker(DB)
-				balanceWorker.CorrectionProcessor = mockCorrectionProcessor
+				balanceWorker.TransactionProcessor = mockTransactionProcessor
+				balanceWorker.LockUuid = lockUuid
 			})
 
-			It("the correctionProcessor should be called", func() {
-				mockCorrectionProcessor.EXPECT().Execute(correction)
+			It("the transactionProcessor should be called only for one transaction", func() {
+				mockTransactionProcessor.EXPECT().Execute(transaction).Times(1)
 				err := balanceWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
 			})

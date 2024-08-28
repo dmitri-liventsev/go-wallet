@@ -70,18 +70,21 @@ func generatePayloads(limit int) ([]*transaction.CreatePayload, int64) {
 		state := entities.Win
 
 		randomBool := rand.Intn(2) == 1
+		amount := "10"
 		if randomBool {
 			state = entities.Lost
 			if expectedBalance-10 >= 0 {
 				expectedBalance -= 10
 			}
+
+			amount = "-10"
 		} else {
 			expectedBalance += 10
 		}
 
 		payloads = append(payloads, &transaction.CreatePayload{
 			State:         state,
-			Amount:        "10",
+			Amount:        amount,
 			TransactionID: uuid.New().String(),
 			SourceType:    entities.Game,
 		})

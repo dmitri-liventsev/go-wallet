@@ -2,7 +2,7 @@ package workers
 
 import (
 	"context"
-	"github.com/pkg/errors"
+	"github.com/google/uuid"
 	"goa.design/clue/log"
 	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/entities"
@@ -33,65 +33,48 @@ func RunBalanceWorker(ctx context.Context, db *gorm.DB) {
 	}(ctx)
 }
 
-// CorrectionProcessor defines an interface for processing corrections.
-type CorrectionProcessor interface {
-	Execute(correction *entities.Correction) error
-}
-
 // TransactionProcessor defines an interface for processing transactions.
 type TransactionProcessor interface {
 	Execute(transaction *entities.Transaction) error
 }
 
-// CorrectionProvider defines an interface for retrieving corrections.
-type CorrectionProvider interface {
-	GetActualCorrection() (*entities.Correction, error)
-	GetNewestCorrection() (*entities.Correction, error)
-}
-
 // TransactionProvider defines an interface for retrieving the next transaction to be processed.
 type TransactionProvider interface {
-	GetNextTransaction() (*entities.Transaction, error)
+	LockNewTransactions(lockUuid uuid.UUID) error
+	GetLockedTransactions() ([]entities.Transaction, error)
 }
 
 // BalanceWorker is responsible for monitoring new correction requests, initiating correction processing,
 // tracking new transactions, and initiating their processing.
 type BalanceWorker struct {
-	repo                 CorrectionProvider
-	txRepo               TransactionProvider
-	CorrectionProcessor  CorrectionProcessor
+	txProvider           TransactionProvider
 	TransactionProcessor TransactionProcessor
+	LockUuid             uuid.UUID
 }
 
 // Execute retrieves and processes the current correction if available,
 // then retrieves and processes the next transaction.
 func (b BalanceWorker) Execute() error {
-	{
-		correction, err := b.repo.GetActualCorrection()
-		if err != nil {
-			return errors.Wrap(err, "cannot get last correction")
-		}
-
-		if correction != nil {
-			err := b.CorrectionProcessor.Execute(correction)
-			if err != nil {
-				return errors.Wrap(err, "cannot Execute correction processor")
-			}
-		}
+	// Lock transactions
+	err := b.txProvider.LockNewTransactions(b.LockUuid)
+	if err != nil {
+		return err
 	}
 
-	{
-		nextTx, err := b.txRepo.GetNextTransaction()
-		if err != nil {
-			return errors.Wrap(err, "can not get next transaction")
-		}
-		if nextTx == nil {
-			return nil
+	//get  all locked transactions
+	transactions, err := b.txProvider.GetLockedTransactions()
+	if err != nil {
+		return err
+	}
+
+	for _, transaction := range transactions {
+		if *transaction.LockUuid != b.LockUuid {
+			return nil // next transactions to handle was booked by another process
 		}
 
-		err = b.TransactionProcessor.Execute(nextTx)
+		err := b.TransactionProcessor.Execute(&transaction)
 		if err != nil {
-			return errors.Wrap(err, "can not Execute transaction processor")
+			return err
 		}
 	}
 
@@ -101,9 +84,8 @@ func (b BalanceWorker) Execute() error {
 // NewBalanceWorker returns BalanceWorker instance.
 func NewBalanceWorker(db *gorm.DB) BalanceWorker {
 	return BalanceWorker{
-		repo:                 repositories.NewCorrectionRepository(db),
-		txRepo:               repositories.NewTransactionRepository(db),
-		CorrectionProcessor:  services.NewCorrectionProcessor(db),
+		txProvider:           repositories.NewTransactionRepository(db),
 		TransactionProcessor: services.NewTransactionProcessor(db),
+		LockUuid:             uuid.New(),
 	}
 }

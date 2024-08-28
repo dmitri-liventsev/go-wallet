@@ -15,9 +15,15 @@ type TransactionProcessor struct {
 }
 
 // Execute processes the given transaction by updating the balance and marking the transaction as done
-// or cancelled based on the outcome.
+// or cancelled based on the outcome. Internal transactions ignoring negative balance validation
 func (t TransactionProcessor) Execute(transaction *entities.Transaction) error {
-	err := t.BalanceService.UpdateBalance(transaction.Amount)
+	var err error
+
+	if transaction.IsInternal() {
+		err = t.BalanceService.ForceUpdateBalance(transaction.Amount)
+	} else {
+		err = t.BalanceService.UpdateBalance(transaction.Amount)
+	}
 
 	if err != nil && errors.Is(err, ErrNegativeBalance) {
 		transaction.MarkAsCancelled()

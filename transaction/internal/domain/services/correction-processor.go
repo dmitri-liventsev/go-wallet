@@ -1,30 +1,52 @@
 package services
 
 import (
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
+	"wallet/transaction/internal/domain/vo"
 )
 
-// CorrectionProcessor handles the processing of corrections.
+// CorrectionProcessor handles the creation and initialization of new corrections,
+// using repositories for transactions and corrections.
 type CorrectionProcessor struct {
-	TxRepo         *repositories.TransactionRepository
-	CorrectionRepo *repositories.CorrectionRepository
-	BalanceService *Balance
+	txRepo         *repositories.TransactionRepository
+	correctionRepo *repositories.CorrectionRepository
 }
 
-// Execute processes the provided correction by finding and canceling transactions listed in the correction,
-// updating the balance for each transaction.
-func (c CorrectionProcessor) Execute(correction *entities.Correction) error {
-	if len(correction.TransactionIDs) > 0 {
-		err := c.doCorrection(correction.TransactionIDs)
+// Execute retrieves the last 10 odd-numbered transactions cancel it and add new transaction with inversed sum of cancelled transactions
+func (c CorrectionProcessor) Execute() error {
+	doomedTransactions, err := c.txRepo.GetLastOddTransactions(10)
+	if err != nil {
+		return errors.Wrap(err, "couldn't get last odd transactions")
+	}
+
+	ids := make([]string, len(doomedTransactions))
+	delta := vo.NewAmount(0)
+	for i, tx := range doomedTransactions {
+		ids[i] = tx.ID
+		delta = delta.Add(tx.Amount)
+		tx.MarkAsCancelled()
+		err := c.txRepo.Save(&tx)
 		if err != nil {
 			return err
 		}
 	}
 
-	correction.MarkAsDone()
-	err := c.CorrectionRepo.Save(correction)
+	if delta.IsZero() {
+		return nil
+	}
+
+	delta = delta.Inverse()
+	action := entities.Win
+	if delta.LessThenZero() {
+		action = entities.Lost
+	}
+
+	correctionTransaction := entities.NewTransaction(uuid.New().String(), delta, action, entities.Internal)
+	err = c.txRepo.Save(correctionTransaction)
 	if err != nil {
 		return err
 	}
@@ -32,33 +54,10 @@ func (c CorrectionProcessor) Execute(correction *entities.Correction) error {
 	return nil
 }
 
-func (c CorrectionProcessor) doCorrection(transactionIDs []string) error {
-	transactions, err := c.TxRepo.FindByIDs(transactionIDs)
-	if err != nil {
-		return err
-	}
-
-	for _, transaction := range transactions {
-		err := c.BalanceService.ForceUpdateBalance(transaction.Amount.Inverse())
-		if err != nil {
-			return err
-		}
-
-		transaction.MarkAsCancelled()
-		err = c.TxRepo.Save(&transaction)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// NewCorrectionProcessor returns CorrectionProcessor instance.
+// NewCorrectionInitializer returns CorrectionProcessor instance.
 func NewCorrectionProcessor(db *gorm.DB) CorrectionProcessor {
 	return CorrectionProcessor{
-		TxRepo:         repositories.NewTransactionRepository(db),
-		CorrectionRepo: repositories.NewCorrectionRepository(db),
-		BalanceService: NewBalanceService(db),
+		txRepo:         repositories.NewTransactionRepository(db),
+		correctionRepo: repositories.NewCorrectionRepository(db),
 	}
 }

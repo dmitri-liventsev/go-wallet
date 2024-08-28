@@ -43,18 +43,36 @@ func (repo CorrectionRepository) GetActualCorrection() (*entities.Correction, er
 	return &correction, nil
 }
 
-// GetNewestCorrection returns new newest correction fo LIFO processing.
-func (repo CorrectionRepository) GetNewestCorrection() (*entities.Correction, error) {
-	var correction entities.Correction
+// Lock locks correction which is ready to execute or which is frozen
+func (repo CorrectionRepository) Lock(lockUuid uuid.UUID) error {
+	threshold1 := time.Now().Add(-10 * time.Minute)
+	thresholdForFrozen := time.Now().Add(-10 * time.Minute)
 
-	if err := repo.db.Order("created_at DESC").Limit(1).First(&correction).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
+	result := repo.db.Model(&entities.Correction{}).
+		Where("(status = ? AND done_at < ?) OR locked_at < ?", "ready", threshold1, thresholdForFrozen).
+		Updates(map[string]interface{}{
+			"status":    "locked",
+			"lock_uuid": lockUuid,
+			"locked_at": time.Now(),
+		})
+
+	if result.Error != nil {
+		return result.Error
 	}
 
-	return &correction, nil
+	return nil
+}
+
+// FindAll returns all transactions
+func (repo CorrectionRepository) FindAll() ([]entities.Correction, error) {
+	var corrections []entities.Correction
+
+	result := repo.db.Find(&corrections)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return corrections, nil
 }
 
 // NewCorrectionRepository returns CorrectionRepository instance.

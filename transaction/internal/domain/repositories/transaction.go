@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"errors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 	"time"
@@ -122,6 +123,53 @@ func (repo TransactionRepository) CalculateBalance() (int64, error) {
 	}
 
 	return *totalAmount, nil
+}
+
+// LockNewTransactions locks all new and frozen(transactions which have lockedAt time more than 1 min ago) transactions
+func (repo TransactionRepository) LockNewTransactions(lockUuid uuid.UUID) error {
+	now := time.Now()
+	threshold := now.Add(-1 * time.Minute)
+
+	result := repo.db.Model(&entities.Transaction{}).
+		Where("(status = ?) OR (locked_at < ? AND locked_at IS NOT NULL)", "new", threshold).
+		Updates(map[string]interface{}{
+			"status":    "locked",
+			"lock_uuid": lockUuid,
+			"locked_at": now,
+		})
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+// GetLockedTransactions returns all processing transactions ordered by created at ASC
+func (repo TransactionRepository) GetLockedTransactions() ([]entities.Transaction, error) {
+	var transactions []entities.Transaction
+
+	result := repo.db.Where("status = ?", "locked").
+		Order("created_at ASC").
+		Find(&transactions)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return transactions, nil
+}
+
+// FindAll returns all transactions
+func (repo TransactionRepository) FindAll() ([]entities.Transaction, error) {
+	var transactions []entities.Transaction
+
+	result := repo.db.Find(&transactions)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return transactions, nil
 }
 
 // NewTransactionRepository returns TransactionRepository instance.

@@ -22,7 +22,7 @@ func createTx(txID string, amount float64, action string) int {
 	jsonPayload, err := json.Marshal(payload)
 	Expect(err).NotTo(HaveOccurred())
 
-	req, err := http.NewRequest("POST", "http://localhost:8080/transaction", bytes.NewBuffer(jsonPayload))
+	req, err := http.NewRequest("POST", "http://0.0.0.0:8081/transaction", bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return http.StatusInternalServerError
 	}

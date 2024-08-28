@@ -81,9 +81,6 @@ func main() {
 
 	{
 		workers.RunBalanceWorker(ctx, gormdb)
-	}
-
-	{
 		workers.RunCorrectionWorker(ctx, gormdb)
 	}
 

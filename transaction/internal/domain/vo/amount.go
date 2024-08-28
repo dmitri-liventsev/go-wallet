@@ -17,6 +17,11 @@ func (a Amount) Inverse() Amount {
 	return NewAmount(-a.Cents)
 }
 
+// IsZero check at amount are zero
+func (a Amount) IsZero() bool {
+	return a.Cents == 0
+}
+
 // Add returns a new Amount which is the sum of the current amount and the given amount.
 func (a *Amount) Add(amount Amount) Amount {
 	return NewAmount(a.Cents + amount.Cents)

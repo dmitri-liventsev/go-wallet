@@ -13,140 +13,129 @@ var _ = Describe("Balance Correction", func() {
 
 	Context("Balance is zero", func() {
 		var (
-			balanceRepo    *repositories.BalanceRepository
-			correctionRepo *repositories.CorrectionRepository
+			balanceRepo     *repositories.BalanceRepository
+			transactionRepo *repositories.TransactionRepository
 		)
 
 		BeforeEach(func() {
 			balanceRepo = repositories.NewBalanceRepository(DB)
-			correctionRepo = repositories.NewCorrectionRepository(DB)
+			transactionRepo = repositories.NewTransactionRepository(DB)
 
 			balance := entities.NewBalance(vo.NewTotalAmount(0))
 			err := balanceRepo.Save(balance)
 			Expect(err).ToNot(HaveOccurred())
 		})
-		Context("the correction contains an empty list of transactions", func() {
-			var correction *entities.Correction
-
-			BeforeEach(func() {
-				correction = entities.NewCorrection([]string{})
-				err := correctionRepo.Save(correction)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
+		Context("no done transactions are available", func() {
 			When("correction are processed", func() {
 				BeforeEach(func() {
-					err := services.NewCorrectionProcessor(DB).Execute(correction)
+					err := services.NewCorrectionProcessor(DB).Execute()
 					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("the balance remains unchanged", func() {
+				It("balance remains unchanged", func() {
 					balance, err := balanceRepo.Get()
 					Expect(err).ToNot(HaveOccurred())
 					Expect(balance.Value.Cents).To(Equal(int64(0)))
 				})
 
-				It("the correction is marked as processed", func() {
-					var err error
-					correction, err = correctionRepo.GetNewestCorrection()
+				It("no new transactions are added", func() {
+					transactions, err := transactionRepo.FindAll()
 					Expect(err).ToNot(HaveOccurred())
-					Expect(correction.DoneAt).ToNot(BeNil())
+					Expect(transactions).To(HaveLen(0))
 				})
 			})
 		})
 
-		Context("the correction contains one transaction with a positive amount", func() {
-			var correction *entities.Correction
-
+		Context("one transaction with positive amount exists", func() {
 			BeforeEach(func() {
-				transaction := createDoneTransaction(10)
-				correction = entities.NewCorrection([]string{transaction.ID})
-				err := correctionRepo.Save(correction)
-				Expect(err).ToNot(HaveOccurred())
+				_ = createDoneTransaction(10)
 			})
 
 			When("correction are processed", func() {
+				var transactions []entities.Transaction
+
 				BeforeEach(func() {
-					err := services.NewCorrectionProcessor(DB).Execute(correction)
+					err := services.NewCorrectionProcessor(DB).Execute()
+					Expect(err).ToNot(HaveOccurred())
+
+					transactions, err = transactionRepo.FindAll()
 					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("the balance decreases by the amount and becomes negative", func() {
+				It("balance remains unchanged", func() {
 					balance, err := balanceRepo.Get()
 					Expect(err).ToNot(HaveOccurred())
-					Expect(balance.Value.Cents).To(Equal(int64(-10)))
+					Expect(balance.Value.Cents).To(Equal(int64(0)))
 				})
 
-				It("the correction is marked as processed", func() {
-					var err error
-					correction, err = correctionRepo.GetNewestCorrection()
-					Expect(err).ToNot(HaveOccurred())
-					Expect(correction.DoneAt).ToNot(BeNil())
-				})
-			})
-
-		})
-
-		Context("the correction contains one transaction with a negative amount", func() {
-			var correction *entities.Correction
-
-			BeforeEach(func() {
-				transaction := createDoneTransaction(-10)
-				correction = entities.NewCorrection([]string{transaction.ID})
-				err := correctionRepo.Save(correction)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			When("correction are processed", func() {
-				BeforeEach(func() {
-					err := services.NewCorrectionProcessor(DB).Execute(correction)
-					Expect(err).ToNot(HaveOccurred())
+				It("new transaction was added", func() {
+					Expect(transactions).To(HaveLen(2))
 				})
 
-				It("the balance increases by the amount", func() {
-					balance, err := balanceRepo.Get()
-					Expect(err).ToNot(HaveOccurred())
-					Expect(balance.Value.Cents).To(Equal(int64(10)))
-				})
-
-				It("the correction is marked as processed", func() {
-					var err error
-					correction, err = correctionRepo.GetNewestCorrection()
-					Expect(err).ToNot(HaveOccurred())
-					Expect(correction.DoneAt).ToNot(BeNil())
+				It("correction transaction has negative amount", func() {
+					Expect(transactions[1].Amount.Value()).To(Equal(-10))
 				})
 			})
 
 		})
 
-		Context("the correction contains two transactions", func() {
-			var correction *entities.Correction
+		Context("one transaction with negative amount exists", func() {
+			var transactions []entities.Transaction
 
 			BeforeEach(func() {
-				transaction := createDoneTransaction(-10)
-				transaction2 := createDoneTransaction(-1)
-				correction = entities.NewCorrection([]string{transaction.ID, transaction2.ID})
-				err := correctionRepo.Save(correction)
-				Expect(err).ToNot(HaveOccurred())
+				_ = createDoneTransaction(-10)
 			})
 
 			When("correction are processed", func() {
 				BeforeEach(func() {
-					err := services.NewCorrectionProcessor(DB).Execute(correction)
+					err := services.NewCorrectionProcessor(DB).Execute()
+					Expect(err).ToNot(HaveOccurred())
+
+					transactions, err = transactionRepo.FindAll()
 					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("the balance decreases by the sum of all amounts", func() {
+				It("balance remains unchanged", func() {
 					balance, err := balanceRepo.Get()
 					Expect(err).ToNot(HaveOccurred())
-					Expect(balance.Value.Cents).To(Equal(int64(11)))
+					Expect(balance.Value.Cents).To(Equal(int64(0)))
 				})
 
-				It("the correction is marked as processed", func() {
-					var err error
-					correction, err = correctionRepo.GetNewestCorrection()
+				It("new transaction was added", func() {
+					Expect(transactions).To(HaveLen(2))
+				})
+
+				It("correction transaction has positive amount", func() {
+					Expect(transactions[1].Amount.Value()).To(Equal(10))
+				})
+			})
+
+		})
+
+		Context("three transactions are exists", func() {
+			var transactions []entities.Transaction
+
+			BeforeEach(func() {
+				_ = createDoneTransaction(-10)
+				_ = createDoneTransaction(-1)
+				_ = createDoneTransaction(-100)
+			})
+
+			When("correction are processed", func() {
+				BeforeEach(func() {
+					err := services.NewCorrectionProcessor(DB).Execute()
 					Expect(err).ToNot(HaveOccurred())
-					Expect(correction.DoneAt).ToNot(BeNil())
+
+					transactions, err = transactionRepo.FindAll()
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("new transaction was added", func() {
+					Expect(transactions).To(HaveLen(4))
+				})
+
+				It("correction transaction has sum of odds transactions", func() {
+					Expect(transactions[3].Amount.Value()).To(Equal(110))
 				})
 			})
 		})

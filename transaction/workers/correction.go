@@ -2,9 +2,11 @@ package workers
 
 import (
 	"context"
-	"github.com/pkg/errors"
+	"github.com/google/uuid"
 	"goa.design/clue/log"
 	"gorm.io/gorm"
+	"time"
+	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/services"
 	txdb "wallet/transaction/internal/infrastructure/db"
@@ -13,6 +15,10 @@ import (
 // RunCorrectionWorker starts a background goroutine that continuously executes the correction worker, handling
 // transactions and rolling back on errors until the context is done.
 func RunCorrectionWorker(ctx context.Context, db *gorm.DB) {
+	// lests generate new correction if it does not exist,
+	// we can swallow error here because even at it returns error, we will try again after
+	_, _ = services.NewCorrectionProvider(db).Provide()
+
 	go func(ctx context.Context) {
 		for {
 			select {
@@ -32,33 +38,73 @@ func RunCorrectionWorker(ctx context.Context, db *gorm.DB) {
 	}(ctx)
 }
 
-// CorrectionInitializer create a new correction order
-type CorrectionInitializer interface {
+// CorrectionProvider provide correction
+type CorrectionProvider interface {
+	Provide() (*entities.Correction, error)
+}
+
+// CorrectionLocker lock correction
+type CorrectionLocker interface {
+	Lock(lockUuid uuid.UUID) error
+}
+
+// CorrectionProcessor doing correction
+type CorrectionProcessor interface {
 	Execute() error
+}
+
+// CorrectionSaver saves correction
+type CorrectionSaver interface {
+	Save(correction *entities.Correction) error
 }
 
 // CorrectionWorker monitors the creation of the latest correction and adds a new one if more than 10 minutes have
 // passed since the last correction was processed.
 type CorrectionWorker struct {
-	CorrectionInitializer CorrectionInitializer
-	cRepo                 CorrectionProvider
+	CorrectionProvider  CorrectionProvider
+	CorrectionProcessor CorrectionProcessor
+	Locker              CorrectionLocker
+	Saver               CorrectionSaver
+	LockUuid            uuid.UUID
 }
 
 // Execute retrieves the newest correction and, if none exists or the latest correction was processed more than
 // 10 minutes ago, initializes a new correction.
 func (c CorrectionWorker) Execute() error {
-	newestCorrection, err := c.cRepo.GetNewestCorrection()
+	err := c.Locker.Lock(c.LockUuid)
 	if err != nil {
-		return errors.Wrap(err, "cannot GetNewestCorrection")
+		return err
+	}
+	correction, err := c.CorrectionProvider.Provide()
+	if err != nil {
+		return err
 	}
 
-	// If there are no correction yet (system just started) or if newest correction are processed already,
-	// and it was more than 10 min ago
-	if newestCorrection == nil || newestCorrection.IsOutOFDate() {
-		err := c.CorrectionInitializer.Execute()
-		if err != nil {
-			return errors.Wrap(err, "cant create a new correction")
-		}
+	if *correction.LockUuid != c.LockUuid {
+		return nil
+	}
+
+	err = c.CorrectionProcessor.Execute()
+	if err != nil {
+		return err
+	}
+
+	err = c.unLock(correction)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c CorrectionWorker) unLock(correction *entities.Correction) error {
+	now := time.Now()
+	correction.DoneAt = &now
+	correction.LockUuid = nil
+
+	err := c.Saver.Save(correction)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -66,8 +112,13 @@ func (c CorrectionWorker) Execute() error {
 
 // NewCorrectionWorker returns CorrectionWorker instance.
 func NewCorrectionWorker(db *gorm.DB) CorrectionWorker {
+	correctionRepository := repositories.NewCorrectionRepository(db)
+
 	return CorrectionWorker{
-		CorrectionInitializer: services.NewCorrectionInitializer(db),
-		cRepo:                 repositories.NewCorrectionRepository(db),
+		CorrectionProvider:  services.NewCorrectionProvider(db),
+		CorrectionProcessor: services.NewCorrectionProcessor(db),
+		Locker:              correctionRepository,
+		Saver:               correctionRepository,
+		LockUuid:            uuid.New(),
 	}
 }

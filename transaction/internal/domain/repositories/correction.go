@@ -63,7 +63,7 @@ func (repo CorrectionRepository) Lock(lockUuid uuid.UUID) error {
 	thresholdForFrozen := time.Now().Add(-10 * time.Minute)
 
 	result := repo.db.Model(&entities.Correction{}).
-		Where("(status = ? AND done_at < ?) OR locked_at < ?", "ready", threshold1, thresholdForFrozen).
+		Where("(status = ? AND done_at < ?) OR (status = ? AND locked_at < ?)", "ready", threshold1, "locked", thresholdForFrozen).
 		Updates(map[string]interface{}{
 			"status":    "locked",
 			"lock_uuid": lockUuid,

@@ -49,12 +49,14 @@ var _ = Describe("correction record lazy creation", func() {
 
 		When("trying to provide transaction", func() {
 			var (
-				correctionRepository = repositories.NewCorrectionRepository(DB)
+				correctionRepository *repositories.CorrectionRepository
 				correction           *entities.Correction
 				err                  error
 			)
 
 			BeforeEach(func() {
+				correctionRepository = repositories.NewCorrectionRepository(DB)
+
 				correction = entities.NewCorrection(uuid.MustParse(entities.CorrectionId))
 				err = correctionRepository.Save(correction)
 				Expect(err).ToNot(HaveOccurred())

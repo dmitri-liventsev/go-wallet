@@ -49,20 +49,36 @@ func main() {
 	defer db.Close()
 
 	initialID := "0f31adad-bfb6-41d1-aeff-c110ca13cbfa"
-	initialBalance := 100000
 
-	_, err = db.Exec(`
-	INSERT INTO balances (id, value)
-	VALUES ($1, $2)
-	ON CONFLICT (id) 
-	DO UPDATE SET value = EXCLUDED.value
-`, initialID, initialBalance)
+	tx, err := db.Begin()
 	if err != nil {
-		log.Fatalf("Failed to insert or update initial balance: %v", err)
+		log.Fatalf("Failed to begin transaction: %v", err)
 	}
 
-	numOfOperations := 2000
-	numWorkers := 10
+	var initialBalance float64
+	err = tx.QueryRow("SELECT value FROM balances WHERE id = $1", initialID).Scan(&initialBalance)
+
+	if err == sql.ErrNoRows {
+		_, err = tx.Exec(`
+			INSERT INTO balances (id, value)
+			VALUES ($1, $2)
+		`, initialID, 100000)
+		initialBalance = 100000
+		if err != nil {
+			tx.Rollback()
+			log.Fatalf("Failed to insert initial balance: %v", err)
+		}
+	} else if err != nil {
+		tx.Rollback()
+		log.Fatalf("Failed to query current balance: %v", err)
+	} else {
+		fmt.Println("Balance already exists, no action taken.")
+	}
+	err = tx.Commit()
+
+	numOfOperations := 1000
+	numWorkers := 20
+
 	jobs := make(chan float64, numOfOperations)
 	results := make(chan error, numOfOperations)
 	var wg sync.WaitGroup

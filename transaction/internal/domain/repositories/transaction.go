@@ -87,7 +87,7 @@ func (repo TransactionRepository) GetLastOddTransactions(limit int) ([]entities.
 	var transactions []entities.Transaction
 	err := repo.db.
 		Table("transactions").
-		Where("status IN (?, ?)", entities.New, entities.Done).
+		Where("status IN (?)", entities.Done).
 		Order("created_at DESC").
 		Limit(limit * 2).
 		Find(&transactions).Error
@@ -131,7 +131,7 @@ func (repo TransactionRepository) LockNewTransactions(lockUuid uuid.UUID) error 
 	threshold := now.Add(-1 * time.Minute)
 
 	result := repo.db.Model(&entities.Transaction{}).
-		Where("(status = ?) OR (locked_at < ? AND locked_at IS NOT NULL)", "new", threshold).
+		Where("(status = ?) OR (locked_at < ? AND status = ?)", "new", threshold, "locked").
 		Updates(map[string]interface{}{
 			"status":    "locked",
 			"lock_uuid": lockUuid,

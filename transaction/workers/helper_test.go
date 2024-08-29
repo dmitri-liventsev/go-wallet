@@ -54,10 +54,20 @@ func createTransaction(amount int) *entities.Transaction {
 	return createTransactionWithStatus(amount, entities.New)
 }
 
+func createDoneTransaction(amount int) *entities.Transaction {
+	GinkgoHelper()
+	return createTransactionWithStatus(amount, entities.Done)
+}
+
 func createLockedTransaction(lockId *uuid.UUID) *entities.Transaction {
 	GinkgoHelper()
-	transaction := createTransactionWithStatus(10, entities.New)
+	transaction := createTransactionWithStatus(10, entities.Locked)
 	transaction.LockUuid = lockId
+	now := time.Now()
+	transaction.LockedAt = &now
+
+	err := repositories.NewTransactionRepository(DB).Save(transaction)
+	Expect(err).ToNot(HaveOccurred())
 
 	return transaction
 }

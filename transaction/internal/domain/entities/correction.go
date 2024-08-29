@@ -55,6 +55,7 @@ func NewCorrection(id uuid.UUID) *Correction {
 		Status: Ready,
 		// avoid correction on service starting:
 		LockedAt: &now,
+		DoneAt:   &now,
 		LockUuid: &lockUuid,
 	}
 }

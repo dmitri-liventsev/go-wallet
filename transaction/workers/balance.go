@@ -5,7 +5,6 @@ import (
 	"github.com/google/uuid"
 	"goa.design/clue/log"
 	"gorm.io/gorm"
-	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/services"
 	txdb "wallet/transaction/internal/infrastructure/db"
@@ -15,68 +14,62 @@ import (
 // handling transactions and rolling back on errors until the context is done.
 func RunBalanceWorker(ctx context.Context, db *gorm.DB) {
 	go func(ctx context.Context) {
+		worker := NewBalanceWorker(db)
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				tx := db.Begin()
-				err := NewBalanceWorker(tx).Execute()
+				err := worker.Execute()
 				if err != nil {
 					log.Fatalf(ctx, err, "cannot Execute balance worker")
-					tx.Rollback()
 				}
-
-				_ = txdb.TryTxCommit(tx)
 			}
 		}
 	}(ctx)
 }
 
-// TransactionProcessor defines an interface for processing transactions.
-type TransactionProcessor interface {
-	Execute(transaction *entities.Transaction) error
-}
-
-// TransactionProvider defines an interface for retrieving the next transaction to be processed.
-type TransactionProvider interface {
-	LockNewTransactions(lockUuid uuid.UUID) error
-	GetLockedTransactions() ([]entities.Transaction, error)
-}
-
 // BalanceWorker is responsible for monitoring new correction requests, initiating correction processing,
 // tracking new transactions, and initiating their processing.
 type BalanceWorker struct {
-	txProvider           TransactionProvider
-	TransactionProcessor TransactionProcessor
-	LockUuid             uuid.UUID
+	LockUuid uuid.UUID
+	db       *gorm.DB
 }
 
 // Execute retrieves and processes the current correction if available,
 // then retrieves and processes the next transaction.
 func (b BalanceWorker) Execute() error {
+	tx := b.db.Begin()
 	// Lock transactions
-	err := b.txProvider.LockNewTransactions(b.LockUuid)
+	txProvider := repositories.NewTransactionRepository(tx)
+	err := txProvider.LockNewTransactions(b.LockUuid)
 	if err != nil {
+
+		tx.Rollback()
 		return err
 	}
 
 	//get  all locked transactions
-	transactions, err := b.txProvider.GetLockedTransactions()
+	transactions, err := txProvider.GetLockedTransactions()
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	for _, transaction := range transactions {
 		if *transaction.LockUuid != b.LockUuid {
+			_ = txdb.TryTxCommit(tx)
 			return nil // next transactions to handle was booked by another process
 		}
 
-		err := b.TransactionProcessor.Execute(&transaction)
+		err := services.NewTransactionProcessor(tx).Execute(&transaction)
 		if err != nil {
+			tx.Rollback()
 			return err
 		}
 	}
+
+	_ = txdb.TryTxCommit(tx)
 
 	return nil
 }
@@ -84,8 +77,7 @@ func (b BalanceWorker) Execute() error {
 // NewBalanceWorker returns BalanceWorker instance.
 func NewBalanceWorker(db *gorm.DB) BalanceWorker {
 	return BalanceWorker{
-		txProvider:           repositories.NewTransactionRepository(db),
-		TransactionProcessor: services.NewTransactionProcessor(db),
-		LockUuid:             uuid.New(),
+		db:       db,
+		LockUuid: uuid.New(),
 	}
 }

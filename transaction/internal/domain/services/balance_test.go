@@ -11,10 +11,12 @@ import (
 )
 
 var _ = Describe("check balance initialization and providing", func() {
-	var balanceService *services.Balance
+	var (
+		balanceProvider services.BalanceProvider
+	)
 
 	BeforeEach(func() {
-		balanceService = services.NewBalanceService(DB)
+		balanceProvider = services.NewBalanceProvider(DB)
 	})
 
 	Context("balance does not exists", func() {
@@ -26,7 +28,7 @@ var _ = Describe("check balance initialization and providing", func() {
 				)
 
 				BeforeEach(func() {
-					balance, err = balanceService.ProvideBalance()
+					balance, err = balanceProvider.Provide()
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -50,11 +52,11 @@ var _ = Describe("check balance initialization and providing", func() {
 				err := repo.Create(transaction)
 				Expect(err).ToNot(HaveOccurred())
 
-				balance, err = balanceService.ProvideBalance()
+				balance, err = balanceProvider.Provide()
 			})
 
 			BeforeEach(func() {
-				balance, err = balanceService.ProvideBalance()
+				balance, err = balanceProvider.Provide()
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -78,7 +80,7 @@ var _ = Describe("check balance initialization and providing", func() {
 		})
 
 		BeforeEach(func() {
-			balance, err = balanceService.ProvideBalance()
+			balance, err = balanceProvider.Provide()
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -89,10 +91,14 @@ var _ = Describe("check balance initialization and providing", func() {
 })
 
 var _ = Describe("check balance updating", func() {
-	var balanceService *services.Balance
+	var (
+		balanceService  *services.Balance
+		balanceProvider services.BalanceProvider
+	)
 
 	BeforeEach(func() {
 		balanceService = services.NewBalanceService(DB)
+		balanceProvider = services.NewBalanceProvider(DB)
 	})
 
 	Context("balance are zero", func() {
@@ -103,7 +109,7 @@ var _ = Describe("check balance updating", func() {
 			})
 
 			It("should increment balance", func() {
-				balance, err := balanceService.ProvideBalance()
+				balance, err := balanceProvider.Provide()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(balance.Value.Value()).To(Equal(int64(10)))
 			})
@@ -119,7 +125,7 @@ var _ = Describe("check balance updating", func() {
 			})
 
 			It("should not increment balance", func() {
-				balance, err := balanceService.ProvideBalance()
+				balance, err := balanceProvider.Provide()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(balance.Value.Value()).To(Equal(int64(0)))
 			})

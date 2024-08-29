@@ -25,7 +25,8 @@ var _ = BeforeEach(func() {
 
 func createTestClient() *transaction.Client {
 	endpoint := transaction.NewCreateEndpoint(interfaces.NewTxController(DB))
-	return transaction.NewClient(endpoint)
+	healthcheck := transaction.NewHealthcheckEndpoint(interfaces.NewTxController(DB))
+	return transaction.NewClient(healthcheck, endpoint)
 }
 
 func connectToTestDB(ctx context.Context) *gorm.DB {

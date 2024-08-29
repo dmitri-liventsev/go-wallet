@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"encoding/json"
 	"github.com/google/uuid"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"time"
@@ -50,10 +51,18 @@ type Transaction struct {
 	UpdatedAt  time.Time  `gorm:"type:timestamptz;default:current_timestamp"`
 }
 
+func (t Transaction) ToJSON() (string, error) {
+	jsonData, err := json.Marshal(t)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonData), nil
+}
+
 // MarkAsDone mark Transaction as done.
 func (t *Transaction) MarkAsDone() {
 	t.Status = Done
-	t.LockUuid = nil
+	//t.LockUuid = nil
 }
 
 // MarkAsCancelled mark Transaction as cancelled

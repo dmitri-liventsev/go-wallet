@@ -1,40 +1,36 @@
 package workers_test
 
 import (
-	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/workers"
-	"wallet/transaction/workers/internal/mocks"
 )
 
 var _ = Describe("correction worker", func() {
 	Context("correction does not exists", func() {
 		When("correction workers started", func() {
 			var (
-				correctionWorker        workers.CorrectionWorker
-				ctrl                    *gomock.Controller
-				mockCorrectionProcessor *mocks.MockCorrectionProcessor
-				correctionRepo          *repositories.CorrectionRepository
+				correctionWorker workers.CorrectionWorker
+				correctionRepo   *repositories.CorrectionRepository
+				transactionRepo  *repositories.TransactionRepository
+				tranasction      *entities.Transaction
 			)
 
 			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				DeferCleanup(func() { ctrl.Finish() })
-
-				mockCorrectionProcessor = mocks.NewMockCorrectionProcessor(ctrl)
 				correctionWorker = workers.NewCorrectionWorker(DB)
-				correctionWorker.CorrectionProcessor = mockCorrectionProcessor
 				correctionRepo = repositories.NewCorrectionRepository(DB)
+
+				transactionRepo = repositories.NewTransactionRepository(DB)
+				tranasction = createDoneTransaction(10)
+
+				err := correctionWorker.Execute()
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should create new correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
@@ -42,21 +38,17 @@ var _ = Describe("correction worker", func() {
 			})
 
 			It("correction process should not be started", func() {
-				mockCorrectionProcessor.EXPECT().Execute().Times(0)
-
-				err := correctionWorker.Execute()
+				transactionAfterProcess, err := transactionRepo.FindByID(tranasction.ID)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(transactionAfterProcess.Status).ToNot(Equal(entities.Cancelled))
 			})
 
-			It("should not unlock correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
+			It("should be ready", func() {
 				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(correction.LockUuid).ToNot(BeNil())
-				Expect(correction.Status).ToNot(Equal(entities.Ready))
+				Expect(correction.Status).To(Equal(entities.Ready))
 			})
 		})
 	})
@@ -71,27 +63,26 @@ var _ = Describe("correction worker", func() {
 
 		When("correction workers started", func() {
 			var (
-				correctionWorker        workers.CorrectionWorker
-				ctrl                    *gomock.Controller
-				mockCorrectionProcessor *mocks.MockCorrectionProcessor
-				correctionRepo          *repositories.CorrectionRepository
+				correctionWorker workers.CorrectionWorker
+				correctionRepo   *repositories.CorrectionRepository
+				transactionRepo  *repositories.TransactionRepository
+				tranasction      *entities.Transaction
 			)
 
 			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				DeferCleanup(func() { ctrl.Finish() })
 				correctionRepo = repositories.NewCorrectionRepository(DB)
 
-				mockCorrectionProcessor = mocks.NewMockCorrectionProcessor(ctrl)
 				correctionWorker = workers.NewCorrectionWorker(DB)
-				correctionWorker.CorrectionProcessor = mockCorrectionProcessor
 				correctionWorker.LockUuid = lockUuid
+
+				transactionRepo = repositories.NewTransactionRepository(DB)
+				tranasction = createDoneTransaction(10)
+
+				err := correctionWorker.Execute()
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should not create new correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
@@ -99,16 +90,12 @@ var _ = Describe("correction worker", func() {
 			})
 
 			It("correction process should not be started", func() {
-				mockCorrectionProcessor.EXPECT().Execute().Times(0)
-
-				err := correctionWorker.Execute()
+				transactionAfterProcess, err := transactionRepo.FindByID(tranasction.ID)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(transactionAfterProcess.Status).ToNot(Equal(entities.Cancelled))
 			})
 
 			It("should not unlock correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
@@ -128,26 +115,25 @@ var _ = Describe("correction worker", func() {
 
 		When("correction workers started", func() {
 			var (
-				correctionWorker        workers.CorrectionWorker
-				ctrl                    *gomock.Controller
-				mockCorrectionProcessor *mocks.MockCorrectionProcessor
-				correctionRepo          *repositories.CorrectionRepository
+				correctionWorker workers.CorrectionWorker
+				correctionRepo   *repositories.CorrectionRepository
+				transactionRepo  *repositories.TransactionRepository
+				tranasction      *entities.Transaction
 			)
 
 			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				DeferCleanup(func() { ctrl.Finish() })
-
-				mockCorrectionProcessor = mocks.NewMockCorrectionProcessor(ctrl)
 				correctionWorker = workers.NewCorrectionWorker(DB)
-				correctionWorker.CorrectionProcessor = mockCorrectionProcessor
+				correctionWorker.LockUuid = lockUuid
 				correctionRepo = repositories.NewCorrectionRepository(DB)
+
+				transactionRepo = repositories.NewTransactionRepository(DB)
+				tranasction = createDoneTransaction(10)
+
+				err := correctionWorker.Execute()
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should not create new correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
@@ -155,16 +141,12 @@ var _ = Describe("correction worker", func() {
 			})
 
 			It("correction process should be started", func() {
-				mockCorrectionProcessor.EXPECT().Execute().Times(1)
-
-				err := correctionWorker.Execute()
+				transactionAfterProcess, err := transactionRepo.FindByID(tranasction.ID)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(transactionAfterProcess.Status).To(Equal(entities.Cancelled))
 			})
 
 			It("should unlock correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
@@ -184,26 +166,24 @@ var _ = Describe("correction worker", func() {
 
 		When("correction workers started", func() {
 			var (
-				correctionWorker        workers.CorrectionWorker
-				ctrl                    *gomock.Controller
-				mockCorrectionProcessor *mocks.MockCorrectionProcessor
-				correctionRepo          *repositories.CorrectionRepository
+				correctionWorker workers.CorrectionWorker
+				correctionRepo   *repositories.CorrectionRepository
+				transactionRepo  *repositories.TransactionRepository
+				tranasction      *entities.Transaction
 			)
 
 			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				DeferCleanup(func() { ctrl.Finish() })
-
-				mockCorrectionProcessor = mocks.NewMockCorrectionProcessor(ctrl)
 				correctionWorker = workers.NewCorrectionWorker(DB)
-				correctionWorker.CorrectionProcessor = mockCorrectionProcessor
 				correctionRepo = repositories.NewCorrectionRepository(DB)
+
+				transactionRepo = repositories.NewTransactionRepository(DB)
+				tranasction = createDoneTransaction(10)
+
+				err := correctionWorker.Execute()
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should not create new correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
@@ -211,16 +191,12 @@ var _ = Describe("correction worker", func() {
 			})
 
 			It("correction process should not be started", func() {
-				mockCorrectionProcessor.EXPECT().Execute().Times(0)
-
-				err := correctionWorker.Execute()
+				transactionAfterProcess, err := transactionRepo.FindByID(tranasction.ID)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(transactionAfterProcess.Status).ToNot(Equal(entities.Cancelled))
 			})
 
 			It("should not unlock correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
@@ -237,26 +213,24 @@ var _ = Describe("correction worker", func() {
 
 		When("correction workers started", func() {
 			var (
-				correctionWorker        workers.CorrectionWorker
-				ctrl                    *gomock.Controller
-				mockCorrectionProcessor *mocks.MockCorrectionProcessor
-				correctionRepo          *repositories.CorrectionRepository
+				correctionWorker workers.CorrectionWorker
+				correctionRepo   *repositories.CorrectionRepository
+				transactionRepo  *repositories.TransactionRepository
+				tranasction      *entities.Transaction
 			)
 
 			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				DeferCleanup(func() { ctrl.Finish() })
-
-				mockCorrectionProcessor = mocks.NewMockCorrectionProcessor(ctrl)
 				correctionWorker = workers.NewCorrectionWorker(DB)
-				correctionWorker.CorrectionProcessor = mockCorrectionProcessor
 				correctionRepo = repositories.NewCorrectionRepository(DB)
+
+				transactionRepo = repositories.NewTransactionRepository(DB)
+				tranasction = createDoneTransaction(10)
+
+				err := correctionWorker.Execute()
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should not create new correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
@@ -264,10 +238,9 @@ var _ = Describe("correction worker", func() {
 			})
 
 			It("correction process should be started", func() {
-				mockCorrectionProcessor.EXPECT().Execute().Times(1)
-
-				err := correctionWorker.Execute()
+				transactionAfterProcess, err := transactionRepo.FindByID(tranasction.ID)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(transactionAfterProcess.Status).To(Equal(entities.Cancelled))
 			})
 
 			It("should unlock correction", func() {
@@ -290,26 +263,24 @@ var _ = Describe("correction worker", func() {
 
 		When("correction workers started", func() {
 			var (
-				correctionWorker        workers.CorrectionWorker
-				ctrl                    *gomock.Controller
-				mockCorrectionProcessor *mocks.MockCorrectionProcessor
-				correctionRepo          *repositories.CorrectionRepository
+				correctionWorker workers.CorrectionWorker
+				correctionRepo   *repositories.CorrectionRepository
+				transactionRepo  *repositories.TransactionRepository
+				tranasction      *entities.Transaction
 			)
 
 			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				DeferCleanup(func() { ctrl.Finish() })
-
-				mockCorrectionProcessor = mocks.NewMockCorrectionProcessor(ctrl)
 				correctionWorker = workers.NewCorrectionWorker(DB)
-				correctionWorker.CorrectionProcessor = mockCorrectionProcessor
 				correctionRepo = repositories.NewCorrectionRepository(DB)
+
+				transactionRepo = repositories.NewTransactionRepository(DB)
+				tranasction = createDoneTransaction(10)
+
+				err := correctionWorker.Execute()
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should not create new correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
@@ -317,16 +288,12 @@ var _ = Describe("correction worker", func() {
 			})
 
 			It("correction process should be started", func() {
-				mockCorrectionProcessor.EXPECT().Execute().Times(1)
-
-				err := correctionWorker.Execute()
+				transactionAfterProcess, err := transactionRepo.FindByID(tranasction.ID)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(transactionAfterProcess.Status).To(Equal(entities.Cancelled))
 			})
 
 			It("should unlock correction", func() {
-				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
-
 				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 

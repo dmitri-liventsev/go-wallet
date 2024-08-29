@@ -10,7 +10,6 @@ import (
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/services"
-	txdb "wallet/transaction/internal/infrastructure/db"
 )
 
 // RunCorrectionWorker starts a background goroutine that continuously executes the correction worker, handling
@@ -22,6 +21,7 @@ func RunCorrectionWorker(ctx context.Context, db *gorm.DB) {
 	_, _ = services.NewCorrectionProvider(db).Provide()
 
 	go func(ctx context.Context) {
+		lockUuid := uuid.New()
 		for {
 			func() {
 				defer func() {
@@ -35,11 +35,15 @@ func RunCorrectionWorker(ctx context.Context, db *gorm.DB) {
 					case <-ctx.Done():
 						return
 					default:
-						err := NewCorrectionWorker(db).Execute()
+						tx := db.Begin()
+						err := NewCorrectionWorker(tx, lockUuid).Execute()
 						if err != nil {
+							tx.Rollback()
 							log.Errorf(ctx, err, "Cannot execute correction worker")
 							continue
 						}
+
+						_ = tx.Commit()
 					}
 				}
 			}()
@@ -55,59 +59,62 @@ type CorrectionSaver interface {
 // CorrectionWorker monitors the creation of the latest correction and adds a new one if more than 10 minutes have
 // passed since the last correction was processed.
 type CorrectionWorker struct {
-	Saver    CorrectionSaver
-	LockUuid uuid.UUID
-	db       *gorm.DB
+	Saver     CorrectionSaver
+	LockUuid  uuid.UUID
+	Provider  CorrectionProvider
+	Locker    CorrectionLocker
+	Processor CorrectionProcessor
+}
+
+type CorrectionProvider interface {
+	Provide() (*entities.Correction, error)
+}
+
+type CorrectionLocker interface {
+	Lock(lockUuid uuid.UUID) error
+}
+
+type CorrectionProcessor interface {
+	Execute() error
 }
 
 // Execute retrieves the newest correction and, if none exists or the latest correction was processed more than
 // 10 minutes ago, initializes a new correction.
 func (c CorrectionWorker) Execute() error {
-	tx := c.db.Begin()
-	correctionProvider := services.NewCorrectionProvider(tx)
-	correctionRepository := repositories.NewCorrectionRepository(tx)
-
-	err := correctionRepository.Lock(c.LockUuid)
+	err := c.Locker.Lock(c.LockUuid)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
-	correction, err := correctionProvider.Provide()
+	correction, err := c.Provider.Provide()
 
 	if err != nil {
-		tx.Rollback()
 		return errors.Wrap(err, "cant get provider")
 	}
 
 	if correction.LockUuid == nil || *correction.LockUuid != c.LockUuid {
-		_ = txdb.TryTxCommit(tx)
 		return nil
 	}
 
-	err = services.NewCorrectionProcessor(tx).Execute()
+	err = c.Processor.Execute()
 	if err != nil {
-		tx.Rollback()
 		return errors.Wrap(err, "cant execute processor")
 	}
 
-	err = c.unLock(correction, correctionRepository)
+	err = c.unLock(correction)
 	if err != nil {
-		tx.Rollback()
 		return errors.Wrap(err, "cant unlock correction")
 	}
-
-	_ = txdb.TryTxCommit(tx)
 
 	return nil
 }
 
-func (c CorrectionWorker) unLock(correction *entities.Correction, repo *repositories.CorrectionRepository) error {
+func (c CorrectionWorker) unLock(correction *entities.Correction) error {
 	now := time.Now()
 	correction.DoneAt = &now
 	correction.Status = entities.Ready
 	correction.LockUuid = nil
 
-	err := repo.Save(correction)
+	err := c.Saver.Save(correction)
 	if err != nil {
 		return err
 	}
@@ -116,11 +123,14 @@ func (c CorrectionWorker) unLock(correction *entities.Correction, repo *reposito
 }
 
 // NewCorrectionWorker returns CorrectionWorker instance.
-func NewCorrectionWorker(db *gorm.DB) CorrectionWorker {
-	//correctionRepository := repositories.NewCorrectionRepository(db)
+func NewCorrectionWorker(db *gorm.DB, lockUuid uuid.UUID) CorrectionWorker {
+	correctionRepository := repositories.NewCorrectionRepository(db)
 
 	return CorrectionWorker{
-		LockUuid: uuid.New(),
-		db:       db,
+		LockUuid:  lockUuid,
+		Provider:  services.NewCorrectionProvider(db),
+		Locker:    correctionRepository,
+		Saver:     correctionRepository,
+		Processor: services.NewCorrectionProcessor(db),
 	}
 }

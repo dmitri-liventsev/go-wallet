@@ -21,7 +21,7 @@ var _ = Describe("balance worker processing", func() {
 			)
 
 			BeforeEach(func() {
-				balanceWorker = workers.NewBalanceWorker(DB)
+				balanceWorker = workers.NewBalanceWorker(DB, uuid.New())
 
 				balanceProvider = services.NewBalanceProvider(DB)
 				balance, err := balanceProvider.Provide()
@@ -58,7 +58,7 @@ var _ = Describe("balance worker processing", func() {
 				Expect(err).ToNot(HaveOccurred())
 				startBalance = balance.Value
 
-				balanceWorker = workers.NewBalanceWorker(DB)
+				balanceWorker = workers.NewBalanceWorker(DB, uuid.New())
 
 				err = balanceWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
@@ -93,7 +93,7 @@ var _ = Describe("balance worker processing", func() {
 				Expect(err).ToNot(HaveOccurred())
 				startBalance = balance.Value
 
-				balanceWorker = workers.NewBalanceWorker(DB)
+				balanceWorker = workers.NewBalanceWorker(DB, uuid.New())
 
 				err = balanceWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
@@ -130,8 +130,7 @@ var _ = Describe("balance worker processing", func() {
 				Expect(err).ToNot(HaveOccurred())
 				startBalance = balance.Value
 
-				balanceWorker = workers.NewBalanceWorker(DB)
-				balanceWorker.LockUuid = lockUuid
+				balanceWorker = workers.NewBalanceWorker(DB, lockUuid)
 
 				err = balanceWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
@@ -168,8 +167,7 @@ var _ = Describe("balance worker processing", func() {
 			)
 
 			BeforeEach(func() {
-				balanceWorker = workers.NewBalanceWorker(DB)
-				balanceWorker.LockUuid = lockUuid
+				balanceWorker = workers.NewBalanceWorker(DB, lockUuid)
 
 				transactionRepository = repositories.NewTransactionRepository(DB)
 

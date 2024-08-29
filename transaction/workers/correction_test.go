@@ -20,7 +20,7 @@ var _ = Describe("correction worker", func() {
 			)
 
 			BeforeEach(func() {
-				correctionWorker = workers.NewCorrectionWorker(DB)
+				correctionWorker = workers.NewCorrectionWorker(DB, uuid.New())
 				correctionRepo = repositories.NewCorrectionRepository(DB)
 
 				transactionRepo = repositories.NewTransactionRepository(DB)
@@ -72,8 +72,7 @@ var _ = Describe("correction worker", func() {
 			BeforeEach(func() {
 				correctionRepo = repositories.NewCorrectionRepository(DB)
 
-				correctionWorker = workers.NewCorrectionWorker(DB)
-				correctionWorker.LockUuid = lockUuid
+				correctionWorker = workers.NewCorrectionWorker(DB, lockUuid)
 
 				transactionRepo = repositories.NewTransactionRepository(DB)
 				tranasction = createDoneTransaction(10)
@@ -122,8 +121,7 @@ var _ = Describe("correction worker", func() {
 			)
 
 			BeforeEach(func() {
-				correctionWorker = workers.NewCorrectionWorker(DB)
-				correctionWorker.LockUuid = lockUuid
+				correctionWorker = workers.NewCorrectionWorker(DB, lockUuid)
 				correctionRepo = repositories.NewCorrectionRepository(DB)
 
 				transactionRepo = repositories.NewTransactionRepository(DB)
@@ -173,7 +171,7 @@ var _ = Describe("correction worker", func() {
 			)
 
 			BeforeEach(func() {
-				correctionWorker = workers.NewCorrectionWorker(DB)
+				correctionWorker = workers.NewCorrectionWorker(DB, uuid.New())
 				correctionRepo = repositories.NewCorrectionRepository(DB)
 
 				transactionRepo = repositories.NewTransactionRepository(DB)
@@ -220,7 +218,7 @@ var _ = Describe("correction worker", func() {
 			)
 
 			BeforeEach(func() {
-				correctionWorker = workers.NewCorrectionWorker(DB)
+				correctionWorker = workers.NewCorrectionWorker(DB, uuid.New())
 				correctionRepo = repositories.NewCorrectionRepository(DB)
 
 				transactionRepo = repositories.NewTransactionRepository(DB)
@@ -270,7 +268,7 @@ var _ = Describe("correction worker", func() {
 			)
 
 			BeforeEach(func() {
-				correctionWorker = workers.NewCorrectionWorker(DB)
+				correctionWorker = workers.NewCorrectionWorker(DB, uuid.New())
 				correctionRepo = repositories.NewCorrectionRepository(DB)
 
 				transactionRepo = repositories.NewTransactionRepository(DB)

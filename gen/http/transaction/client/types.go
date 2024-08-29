@@ -9,6 +9,8 @@ package client
 
 import (
 	transaction "wallet/gen/transaction"
+
+	goa "goa.design/goa/v3/pkg"
 )
 
 // CreateRequestBody is the type of the "transaction" service "create" endpoint
@@ -22,6 +24,13 @@ type CreateRequestBody struct {
 	TransactionID string `form:"transactionId" json:"transactionId" xml:"transactionId"`
 }
 
+// HealthcheckResponseBody is the type of the "transaction" service
+// "healthcheck" endpoint HTTP response body.
+type HealthcheckResponseBody struct {
+	// Service status
+	Status *string `form:"status,omitempty" json:"status,omitempty" xml:"status,omitempty"`
+}
+
 // NewCreateRequestBody builds the HTTP request body from the payload of the
 // "create" endpoint of the "transaction" service.
 func NewCreateRequestBody(p *transaction.CreatePayload) *CreateRequestBody {
@@ -31,4 +40,23 @@ func NewCreateRequestBody(p *transaction.CreatePayload) *CreateRequestBody {
 		TransactionID: p.TransactionID,
 	}
 	return body
+}
+
+// NewHealthcheckResultOK builds a "transaction" service "healthcheck" endpoint
+// result from a HTTP "OK" response.
+func NewHealthcheckResultOK(body *HealthcheckResponseBody) *transaction.HealthcheckResult {
+	v := &transaction.HealthcheckResult{
+		Status: *body.Status,
+	}
+
+	return v
+}
+
+// ValidateHealthcheckResponseBody runs the validations defined on
+// HealthcheckResponseBody
+func ValidateHealthcheckResponseBody(body *HealthcheckResponseBody) (err error) {
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	return
 }

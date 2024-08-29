@@ -48,6 +48,24 @@ paths:
                     description: Internal server error
             schemes:
                 - http
+    /transaction/health:
+        get:
+            tags:
+                - transaction
+            summary: healthcheck transaction
+            description: Check if the service is running
+            operationId: transaction#healthcheck
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: Service is healthy
+                    schema:
+                        $ref: '#/definitions/TransactionHealthcheckResponseBody'
+                        required:
+                            - status
+            schemes:
+                - http
 definitions:
     TransactionCreateRequestBody:
         title: TransactionCreateRequestBody
@@ -76,3 +94,15 @@ definitions:
             - state
             - amount
             - transactionId
+    TransactionHealthcheckResponseBody:
+        title: TransactionHealthcheckResponseBody
+        type: object
+        properties:
+            status:
+                type: string
+                description: Service status
+                example: Quod eum et voluptates.
+        example:
+            status: Esse est optio.
+        required:
+            - status

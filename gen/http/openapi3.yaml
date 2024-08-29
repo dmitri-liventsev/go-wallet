@@ -45,6 +45,22 @@ paths:
                     description: Invalid input
                 "500":
                     description: Internal server error
+    /transaction/health:
+        get:
+            tags:
+                - transaction
+            summary: healthcheck transaction
+            description: Check if the service is running
+            operationId: transaction#healthcheck
+            responses:
+                "200":
+                    description: Service is healthy
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HealthcheckResponseBody'
+                            example:
+                                status: Repellat natus et.
 components:
     schemas:
         CreateRequestBody:
@@ -73,6 +89,17 @@ components:
                 - state
                 - amount
                 - transactionId
+        HealthcheckResponseBody:
+            type: object
+            properties:
+                status:
+                    type: string
+                    description: Service status
+                    example: Qui ipsa architecto.
+            example:
+                status: Rem ipsum velit aliquid quia delectus quos.
+            required:
+                - status
 tags:
     - name: transaction
       description: The transaction service

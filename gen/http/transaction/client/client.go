@@ -17,6 +17,10 @@ import (
 
 // Client lists the transaction service endpoint HTTP clients.
 type Client struct {
+	// Healthcheck Doer is the HTTP client used to make requests to the healthcheck
+	// endpoint.
+	HealthcheckDoer goahttp.Doer
+
 	// Create Doer is the HTTP client used to make requests to the create endpoint.
 	CreateDoer goahttp.Doer
 
@@ -40,12 +44,32 @@ func NewClient(
 	restoreBody bool,
 ) *Client {
 	return &Client{
+		HealthcheckDoer:     doer,
 		CreateDoer:          doer,
 		RestoreResponseBody: restoreBody,
 		scheme:              scheme,
 		host:                host,
 		decoder:             dec,
 		encoder:             enc,
+	}
+}
+
+// Healthcheck returns an endpoint that makes HTTP requests to the transaction
+// service healthcheck server.
+func (c *Client) Healthcheck() goa.Endpoint {
+	var (
+		decodeResponse = DecodeHealthcheckResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildHealthcheckRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.HealthcheckDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("transaction", "healthcheck", err)
+		}
+		return decodeResponse(resp)
 	}
 }
 

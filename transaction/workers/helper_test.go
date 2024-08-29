@@ -7,13 +7,12 @@ import (
 	"time"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
-	"wallet/transaction/internal/domain/services"
 	"wallet/transaction/internal/domain/vo"
 )
 
 func createLockedCorrection(lockId uuid.UUID) *entities.Correction {
 	GinkgoHelper()
-	correction := entities.NewCorrection(uuid.MustParse(services.CorrectionId))
+	correction := entities.NewCorrection(uuid.MustParse(entities.CorrectionId))
 	correction.Lock(lockId)
 	now := time.Now()
 	correction.LockedAt = &now
@@ -24,7 +23,7 @@ func createLockedCorrection(lockId uuid.UUID) *entities.Correction {
 }
 
 func createReadyCorrection() *entities.Correction {
-	correction := entities.NewCorrection(uuid.MustParse(services.CorrectionId))
+	correction := entities.NewCorrection(uuid.MustParse(entities.CorrectionId))
 	correction.Status = entities.Ready
 	doneAt := time.Now().Add(-11 * time.Minute)
 	correction.LockedAt = &doneAt
@@ -37,7 +36,7 @@ func createReadyCorrection() *entities.Correction {
 }
 
 func createFrozenCorrection() *entities.Correction {
-	correction := entities.NewCorrection(uuid.MustParse(services.CorrectionId))
+	correction := entities.NewCorrection(uuid.MustParse(entities.CorrectionId))
 	correction.Status = entities.Locked
 	lockedAt := time.Now().Add(-11 * time.Minute)
 	correction.LockedAt = &lockedAt

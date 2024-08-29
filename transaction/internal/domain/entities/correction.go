@@ -7,6 +7,9 @@ import (
 
 const Ready = "ready"
 
+// CorrectionId correction id
+const CorrectionId = "3d8e7990-7a74-4613-9ed4-154dbba1d3b5"
+
 // Correction represents the Correction entity, which is a scheduled operation for reversing a list of transactions.
 type Correction struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`

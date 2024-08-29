@@ -13,6 +13,8 @@ import (
 
 // The transaction service
 type Service interface {
+	// Check if the service is running
+	Healthcheck(context.Context) (res *HealthcheckResult, err error)
 	// Create a new transaction
 	Create(context.Context, *CreatePayload) (err error)
 }
@@ -31,7 +33,7 @@ const ServiceName = "transaction"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [1]string{"create"}
+var MethodNames = [2]string{"healthcheck", "create"}
 
 // CreatePayload is the payload type of the transaction service create method.
 type CreatePayload struct {
@@ -43,4 +45,11 @@ type CreatePayload struct {
 	TransactionID string
 	// Source type header
 	SourceType string
+}
+
+// HealthcheckResult is the result type of the transaction service healthcheck
+// method.
+type HealthcheckResult struct {
+	// Service status
+	Status string
 }

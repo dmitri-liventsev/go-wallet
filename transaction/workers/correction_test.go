@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
-	"wallet/transaction/internal/domain/services"
 	"wallet/transaction/workers"
 	"wallet/transaction/workers/internal/mocks"
 )
@@ -39,7 +38,7 @@ var _ = Describe("correction worker", func() {
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
-				Expect(corrections[0].ID.String()).To(Equal(services.CorrectionId))
+				Expect(corrections[0].ID.String()).To(Equal(entities.CorrectionId))
 			})
 
 			It("correction process should not be started", func() {
@@ -53,7 +52,7 @@ var _ = Describe("correction worker", func() {
 				err := correctionWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
 
-				correction, err := correctionRepo.FindByID(uuid.MustParse(services.CorrectionId))
+				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(correction.LockUuid).ToNot(BeNil())
@@ -96,7 +95,7 @@ var _ = Describe("correction worker", func() {
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
-				Expect(corrections[0].ID.String()).To(Equal(services.CorrectionId))
+				Expect(corrections[0].ID.String()).To(Equal(entities.CorrectionId))
 			})
 
 			It("correction process should not be started", func() {
@@ -110,7 +109,7 @@ var _ = Describe("correction worker", func() {
 				err := correctionWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
 
-				correction, err := correctionRepo.FindByID(uuid.MustParse(services.CorrectionId))
+				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(correction.LockUuid).ToNot(BeNil())
@@ -152,7 +151,7 @@ var _ = Describe("correction worker", func() {
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
-				Expect(corrections[0].ID.String()).To(Equal(services.CorrectionId))
+				Expect(corrections[0].ID.String()).To(Equal(entities.CorrectionId))
 			})
 
 			It("correction process should be started", func() {
@@ -166,7 +165,7 @@ var _ = Describe("correction worker", func() {
 				err := correctionWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
 
-				correction, err := correctionRepo.FindByID(uuid.MustParse(services.CorrectionId))
+				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(correction.LockUuid).To(BeNil())
@@ -208,7 +207,7 @@ var _ = Describe("correction worker", func() {
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
-				Expect(corrections[0].ID.String()).To(Equal(services.CorrectionId))
+				Expect(corrections[0].ID.String()).To(Equal(entities.CorrectionId))
 			})
 
 			It("correction process should not be started", func() {
@@ -222,7 +221,7 @@ var _ = Describe("correction worker", func() {
 				err := correctionWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
 
-				correction, err := correctionRepo.FindByID(uuid.MustParse(services.CorrectionId))
+				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(correction.LockUuid).ToNot(BeNil())
@@ -261,7 +260,7 @@ var _ = Describe("correction worker", func() {
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
-				Expect(corrections[0].ID.String()).To(Equal(services.CorrectionId))
+				Expect(corrections[0].ID.String()).To(Equal(entities.CorrectionId))
 			})
 
 			It("correction process should be started", func() {
@@ -275,7 +274,7 @@ var _ = Describe("correction worker", func() {
 				err := correctionWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
 
-				correction, err := correctionRepo.FindByID(uuid.MustParse(services.CorrectionId))
+				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(correction.LockUuid).To(BeNil())
@@ -314,7 +313,7 @@ var _ = Describe("correction worker", func() {
 				corrections, err := correctionRepo.FindAll()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(corrections).To(HaveLen(1))
-				Expect(corrections[0].ID.String()).To(Equal(services.CorrectionId))
+				Expect(corrections[0].ID.String()).To(Equal(entities.CorrectionId))
 			})
 
 			It("correction process should be started", func() {
@@ -328,7 +327,7 @@ var _ = Describe("correction worker", func() {
 				err := correctionWorker.Execute()
 				Expect(err).ToNot(HaveOccurred())
 
-				correction, err := correctionRepo.FindByID(uuid.MustParse(services.CorrectionId))
+				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(correction.LockUuid).To(BeNil())

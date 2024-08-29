@@ -3,37 +3,53 @@ package workers
 import (
 	"context"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"goa.design/clue/log"
 	"gorm.io/gorm"
 	"time"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/services"
-	txdb "wallet/transaction/internal/infrastructure/db"
 )
 
 // RunCorrectionWorker starts a background goroutine that continuously executes the correction worker, handling
 // transactions and rolling back on errors until the context is done.
+// RunCorrectionWorker запускает рабочий процесс для коррекции
 func RunCorrectionWorker(ctx context.Context, db *gorm.DB) {
 	// lests generate new correction if it does not exist,
 	// we can swallow error here because even at it returns error, we will try again after
 	_, _ = services.NewCorrectionProvider(db).Provide()
 
+	// Запускаем горутину для выполнения рабочих задач коррекции.
 	go func(ctx context.Context) {
 		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				tx := db.Begin()
-				err := NewCorrectionWorker(tx).Execute()
-				if err != nil {
-					log.Fatalf(ctx, err, "cannot Execute correction worker")
+			// Обработка паники и перезапуск горутины.
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf(ctx, "Recovered from panic")
+					}
+				}()
 
-					tx.Rollback()
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						tx := db.Begin()
+						err := NewCorrectionWorker(tx).Execute()
+						if err != nil {
+							log.Errorf(ctx, err, "Cannot execute correction worker")
+							tx.Rollback()
+							continue
+						}
+						if err := tx.Commit().Error; err != nil {
+							log.Errorf(ctx, err, "Transaction commit failed")
+							tx.Rollback()
+						}
+					}
 				}
-				_ = txdb.TryTxCommit(tx)
-			}
+			}()
 		}
 	}(ctx)
 }
@@ -76,22 +92,23 @@ func (c CorrectionWorker) Execute() error {
 		return err
 	}
 	correction, err := c.CorrectionProvider.Provide()
+
 	if err != nil {
-		return err
+		return errors.Wrap(err, "cant get provider")
 	}
 
-	if *correction.LockUuid != c.LockUuid {
+	if correction.LockUuid != nil && *correction.LockUuid != c.LockUuid {
 		return nil
 	}
 
 	err = c.CorrectionProcessor.Execute()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "cant execute processor")
 	}
 
 	err = c.unLock(correction)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "cant unlock correction")
 	}
 
 	return nil

@@ -18,8 +18,9 @@ import (
 
 // Server lists the transaction service endpoint HTTP handlers.
 type Server struct {
-	Mounts []*MountPoint
-	Create http.Handler
+	Mounts      []*MountPoint
+	Healthcheck http.Handler
+	Create      http.Handler
 }
 
 // MountPoint holds information about the mounted endpoints.
@@ -49,9 +50,11 @@ func New(
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
+			{"Healthcheck", "GET", "/transaction/health"},
 			{"Create", "POST", "/transaction"},
 		},
-		Create: NewCreateHandler(e.Create, mux, decoder, encoder, errhandler, formatter),
+		Healthcheck: NewHealthcheckHandler(e.Healthcheck, mux, decoder, encoder, errhandler, formatter),
+		Create:      NewCreateHandler(e.Create, mux, decoder, encoder, errhandler, formatter),
 	}
 }
 
@@ -60,6 +63,7 @@ func (s *Server) Service() string { return "transaction" }
 
 // Use wraps the server handlers with the given middleware.
 func (s *Server) Use(m func(http.Handler) http.Handler) {
+	s.Healthcheck = m(s.Healthcheck)
 	s.Create = m(s.Create)
 }
 
@@ -68,12 +72,57 @@ func (s *Server) MethodNames() []string { return transaction.MethodNames[:] }
 
 // Mount configures the mux to serve the transaction endpoints.
 func Mount(mux goahttp.Muxer, h *Server) {
+	MountHealthcheckHandler(mux, h.Healthcheck)
 	MountCreateHandler(mux, h.Create)
 }
 
 // Mount configures the mux to serve the transaction endpoints.
 func (s *Server) Mount(mux goahttp.Muxer) {
 	Mount(mux, s)
+}
+
+// MountHealthcheckHandler configures the mux to serve the "transaction"
+// service "healthcheck" endpoint.
+func MountHealthcheckHandler(mux goahttp.Muxer, h http.Handler) {
+	f, ok := h.(http.HandlerFunc)
+	if !ok {
+		f = func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		}
+	}
+	mux.Handle("GET", "/transaction/health", f)
+}
+
+// NewHealthcheckHandler creates a HTTP handler which loads the HTTP request
+// and calls the "transaction" service "healthcheck" endpoint.
+func NewHealthcheckHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		encodeResponse = EncodeHealthcheckResponse(encoder)
+		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "healthcheck")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "transaction")
+		var err error
+		res, err := endpoint(ctx, nil)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+		if err := encodeResponse(ctx, w, res); err != nil {
+			errhandler(ctx, w, err)
+		}
+	})
 }
 
 // MountCreateHandler configures the mux to serve the "transaction" service

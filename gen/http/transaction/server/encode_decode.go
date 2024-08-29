@@ -12,10 +12,24 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	transaction "wallet/gen/transaction"
 
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 )
+
+// EncodeHealthcheckResponse returns an encoder for responses returned by the
+// transaction healthcheck endpoint.
+func EncodeHealthcheckResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*transaction.HealthcheckResult)
+		ctx = context.WithValue(ctx, goahttp.ContentTypeKey, "application/json")
+		enc := encoder(ctx, w)
+		body := NewHealthcheckResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}
 
 // EncodeCreateResponse returns an encoder for responses returned by the
 // transaction create endpoint.

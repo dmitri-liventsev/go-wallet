@@ -30,6 +30,20 @@ func (repo CorrectionRepository) FindByID(id uuid.UUID) (*entities.Correction, e
 	return &correction, nil
 }
 
+func (repo CorrectionRepository) Get() (*entities.Correction, error) {
+	var correction entities.Correction
+	correctionID := uuid.MustParse(entities.CorrectionId)
+
+	if err := repo.db.Where("id = ?", correctionID).Limit(1).First(&correction).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &correction, nil
+}
+
 // GetActualCorrection returns the oldest unprocessed correction for FIFO processing.
 func (repo CorrectionRepository) GetActualCorrection() (*entities.Correction, error) {
 	var correction entities.Correction

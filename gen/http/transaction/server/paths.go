@@ -7,6 +7,11 @@
 
 package server
 
+// HealthcheckTransactionPath returns the URL path to the transaction service healthcheck HTTP endpoint.
+func HealthcheckTransactionPath() string {
+	return "/transaction/health"
+}
+
 // CreateTransactionPath returns the URL path to the transaction service create HTTP endpoint.
 func CreateTransactionPath() string {
 	return "/transaction"

@@ -22,6 +22,25 @@ var _ = Service("transaction", func() {
 		Path("/transaction")
 	})
 
+	// Healthcheck Method
+	Method("healthcheck", func() {
+		Description("Check if the service is running")
+
+		HTTP(func() {
+			GET("/health")
+			Response(StatusOK, func() {
+				Description("Service is healthy")
+				ContentType("application/json")
+			})
+		})
+
+		Result(func() {
+			Attribute("status", String, "Service status")
+			Required("status")
+		})
+	})
+
+	// Transaction creation method
 	Method("create", func() {
 		Description("Create a new transaction")
 

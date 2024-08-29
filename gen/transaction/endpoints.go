@@ -15,19 +15,30 @@ import (
 
 // Endpoints wraps the "transaction" service endpoints.
 type Endpoints struct {
-	Create goa.Endpoint
+	Healthcheck goa.Endpoint
+	Create      goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "transaction" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		Create: NewCreateEndpoint(s),
+		Healthcheck: NewHealthcheckEndpoint(s),
+		Create:      NewCreateEndpoint(s),
 	}
 }
 
 // Use applies the given middleware to all the "transaction" service endpoints.
 func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.Healthcheck = m(e.Healthcheck)
 	e.Create = m(e.Create)
+}
+
+// NewHealthcheckEndpoint returns an endpoint function that calls the method
+// "healthcheck" of service "transaction".
+func NewHealthcheckEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		return s.Healthcheck(ctx)
+	}
 }
 
 // NewCreateEndpoint returns an endpoint function that calls the method

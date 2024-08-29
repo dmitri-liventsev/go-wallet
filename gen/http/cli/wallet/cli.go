@@ -22,17 +22,13 @@ import (
 //
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() string {
-	return `transaction create
+	return `transaction (healthcheck|create)
 `
 }
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + ` transaction create --body '{
-      "amount": "10.15",
-      "state": "win",
-      "transactionId": "some generated identificator"
-   }' --source-type "game"` + "\n" +
+	return os.Args[0] + ` transaction healthcheck` + "\n" +
 		""
 }
 
@@ -48,11 +44,14 @@ func ParseEndpoint(
 	var (
 		transactionFlags = flag.NewFlagSet("transaction", flag.ContinueOnError)
 
+		transactionHealthcheckFlags = flag.NewFlagSet("healthcheck", flag.ExitOnError)
+
 		transactionCreateFlags          = flag.NewFlagSet("create", flag.ExitOnError)
 		transactionCreateBodyFlag       = transactionCreateFlags.String("body", "REQUIRED", "")
 		transactionCreateSourceTypeFlag = transactionCreateFlags.String("source-type", "REQUIRED", "")
 	)
 	transactionFlags.Usage = transactionUsage
+	transactionHealthcheckFlags.Usage = transactionHealthcheckUsage
 	transactionCreateFlags.Usage = transactionCreateUsage
 
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
@@ -89,6 +88,9 @@ func ParseEndpoint(
 		switch svcn {
 		case "transaction":
 			switch epn {
+			case "healthcheck":
+				epf = transactionHealthcheckFlags
+
 			case "create":
 				epf = transactionCreateFlags
 
@@ -117,6 +119,8 @@ func ParseEndpoint(
 		case "transaction":
 			c := transactionc.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
+			case "healthcheck":
+				endpoint = c.Healthcheck()
 			case "create":
 				endpoint = c.Create()
 				data, err = transactionc.BuildCreatePayload(*transactionCreateBodyFlag, *transactionCreateSourceTypeFlag)
@@ -138,12 +142,23 @@ Usage:
     %[1]s [globalflags] transaction COMMAND [flags]
 
 COMMAND:
+    healthcheck: Check if the service is running
     create: Create a new transaction
 
 Additional help:
     %[1]s transaction COMMAND --help
 `, os.Args[0])
 }
+func transactionHealthcheckUsage() {
+	fmt.Fprintf(os.Stderr, `%[1]s [flags] transaction healthcheck
+
+Check if the service is running
+
+Example:
+    %[1]s transaction healthcheck
+`, os.Args[0])
+}
+
 func transactionCreateUsage() {
 	fmt.Fprintf(os.Stderr, `%[1]s [flags] transaction create -body JSON -source-type STRING
 

@@ -24,6 +24,22 @@ type CreateRequestBody struct {
 	TransactionID *string `form:"transactionId,omitempty" json:"transactionId,omitempty" xml:"transactionId,omitempty"`
 }
 
+// HealthcheckResponseBody is the type of the "transaction" service
+// "healthcheck" endpoint HTTP response body.
+type HealthcheckResponseBody struct {
+	// Service status
+	Status string `form:"status" json:"status" xml:"status"`
+}
+
+// NewHealthcheckResponseBody builds the HTTP response body from the result of
+// the "healthcheck" endpoint of the "transaction" service.
+func NewHealthcheckResponseBody(res *transaction.HealthcheckResult) *HealthcheckResponseBody {
+	body := &HealthcheckResponseBody{
+		Status: res.Status,
+	}
+	return body
+}
+
 // NewCreatePayload builds a transaction service create endpoint payload.
 func NewCreatePayload(body *CreateRequestBody, sourceType string) *transaction.CreatePayload {
 	v := &transaction.CreatePayload{

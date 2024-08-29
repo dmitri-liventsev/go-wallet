@@ -1,12 +1,11 @@
 version: '3.8'
 
 services:
-
-  web:
+  web1:
     build:
       context: .
       dockerfile: transaction/cmd/Dockerfile
-    container_name: web
+    container_name: web1
     volumes:
       - .:/app
     command: ["air"]
@@ -17,8 +16,36 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
     ports:
-      - "80:8080"
+      - "8081:8080"
     depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/transaction/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  web2:
+    build:
+      context: .
+      dockerfile: transaction/cmd/Dockerfile
+    container_name: web2
+    volumes:
+      - .:/app
+    command: ["air"]
+    environment:
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=txdb
+      - DB_HOST=db
+      - DB_PORT=5432
+    ports:
+      - "8082:8080"
+    depends_on:
+      web1:
+        condition: service_healthy
       db:
         condition: service_healthy
 
@@ -34,7 +61,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       retries: 5
 

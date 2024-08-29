@@ -31,7 +31,7 @@ func (c CorrectionProcessor) Execute() error {
 		tx.MarkAsCancelled()
 		err := c.txRepo.Save(&tx)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "unable to save doomed transaction")
 		}
 	}
 
@@ -48,7 +48,7 @@ func (c CorrectionProcessor) Execute() error {
 	correctionTransaction := entities.NewTransaction(uuid.New().String(), delta, action, entities.Internal)
 	err = c.txRepo.Save(correctionTransaction)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "unable to save correction transaction")
 	}
 
 	return nil

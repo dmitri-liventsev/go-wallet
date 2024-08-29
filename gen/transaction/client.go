@@ -15,14 +15,26 @@ import (
 
 // Client is the "transaction" service client.
 type Client struct {
-	CreateEndpoint goa.Endpoint
+	HealthcheckEndpoint goa.Endpoint
+	CreateEndpoint      goa.Endpoint
 }
 
 // NewClient initializes a "transaction" service client given the endpoints.
-func NewClient(create goa.Endpoint) *Client {
+func NewClient(healthcheck, create goa.Endpoint) *Client {
 	return &Client{
-		CreateEndpoint: create,
+		HealthcheckEndpoint: healthcheck,
+		CreateEndpoint:      create,
 	}
+}
+
+// Healthcheck calls the "healthcheck" endpoint of the "transaction" service.
+func (c *Client) Healthcheck(ctx context.Context) (res *HealthcheckResult, err error) {
+	var ires any
+	ires, err = c.HealthcheckEndpoint(ctx, nil)
+	if err != nil {
+		return
+	}
+	return ires.(*HealthcheckResult), nil
 }
 
 // Create calls the "create" endpoint of the "transaction" service.

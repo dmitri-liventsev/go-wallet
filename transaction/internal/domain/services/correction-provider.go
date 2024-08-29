@@ -2,12 +2,11 @@ package services
 
 import (
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 )
-
-const CorrectionId = "3d8e7990-7a74-4613-9ed4-154dbba1d3b5"
 
 // CorrectionProvider checks at correction are exist otherwise creating it
 type CorrectionProvider struct {
@@ -15,20 +14,19 @@ type CorrectionProvider struct {
 }
 
 func (c CorrectionProvider) Provide() (*entities.Correction, error) {
-	correctionId := uuid.MustParse(CorrectionId)
-	correction, err := c.correctionRepo.FindByID(correctionId)
+	correction, err := c.correctionRepo.Get()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "cannot provide correction")
 	}
 
 	if correction != nil {
 		return correction, nil
 	}
+	correction = entities.NewCorrection(uuid.MustParse(entities.CorrectionId))
 
-	correction = entities.NewCorrection(correctionId)
 	err = c.correctionRepo.Save(correction)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "cannot save correction")
 	}
 
 	return correction, nil

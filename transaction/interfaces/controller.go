@@ -30,6 +30,14 @@ func (t txController) Create(ctx context.Context, payload *balancesvc.CreatePayl
 	return command.Execute(t.repo)
 }
 
+func (t txController) Healthcheck(ctx context.Context) (*balancesvc.HealthcheckResult, error) {
+	res := balancesvc.HealthcheckResult{
+		Status: "ok",
+	}
+
+	return &res, nil
+}
+
 func NewTxController(db *gorm.DB) txsvc.Service {
 	return txController{
 		repo: repositories.NewTransactionRepository(db),

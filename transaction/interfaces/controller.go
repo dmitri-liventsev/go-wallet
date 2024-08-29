@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+	"errors"
 	"gorm.io/gorm"
 	balancesvc "wallet/gen/transaction"
 	txsvc "wallet/gen/transaction"
@@ -18,6 +19,13 @@ func (t txController) Create(ctx context.Context, payload *balancesvc.CreatePayl
 	amount, err := vo.NewAmountFromString(payload.Amount)
 	if err != nil {
 		return err
+	}
+
+	if amount.LessThenZero() && payload.State == "win" {
+		return errors.New("win amount must be greater than zero")
+	}
+	if amount.GreaterThenZero() && payload.State == "lost" {
+		return errors.New("win amount must be greater than zero")
 	}
 
 	command := transaction.AddTransaction{

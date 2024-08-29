@@ -16,13 +16,18 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
+const numOfTransactions = 1000
+const numWorkers = 20
+
 type Balance struct {
 	ID     string
 	Amount float64
 }
 
 func getRandomServer() string {
+	//list of available servers
 	servers := []string{"localhost:8081", "localhost:8082"}
+
 	rand.Seed(time.Now().UnixNano())
 	index := rand.Intn(len(servers))
 	return servers[index]
@@ -76,11 +81,8 @@ func main() {
 	}
 	err = tx.Commit()
 
-	numOfOperations := 1000
-	numWorkers := 20
-
-	jobs := make(chan float64, numOfOperations)
-	results := make(chan error, numOfOperations)
+	jobs := make(chan float64, numOfTransactions)
+	results := make(chan error, numOfTransactions)
 	var wg sync.WaitGroup
 
 	for i := 0; i < numWorkers; i++ {
@@ -90,7 +92,7 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 	var sum float64
-	for i := 0; i < numOfOperations; i++ {
+	for i := 0; i < numOfTransactions; i++ {
 		intNum := rand.Intn(2001) - 1000
 		floatNum := float64(intNum) / 100
 		sum += floatNum

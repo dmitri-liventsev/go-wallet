@@ -18,7 +18,7 @@ import (
 
 	"goa.design/clue/debug"
 	"goa.design/clue/log"
-	"wallet/gen/transaction"
+	"wallet/gen/wallet"
 )
 
 func main() {
@@ -50,16 +50,16 @@ func main() {
 	}
 
 	// Initialize the services.
-	var txSvc transaction.Service
+	var txSvc wallet.Service
 	{
 		txSvc = interfaces.NewTxController(gormdb)
 	}
 
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
-	var txEndpoints *transaction.Endpoints
+	var txEndpoints *wallet.Endpoints
 	{
-		txEndpoints = transaction.NewEndpoints(txSvc)
+		txEndpoints = wallet.NewEndpoints(txSvc)
 		txEndpoints.Use(debug.LogPayloads())
 		txEndpoints.Use(log.Endpoint)
 	}
@@ -81,7 +81,6 @@ func main() {
 
 	{
 		workers.RunBalanceWorker(ctx, gormdb)
-		workers.RunCorrectionWorker(ctx, gormdb)
 	}
 
 	{

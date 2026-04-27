@@ -77,9 +77,9 @@ func main() {
 
 		if err == sql.ErrNoRows {
 			_, err = tx.Exec(`
-				INSERT INTO balances (user_id, value)
-				VALUES ($1, $2)
-			`, userId, initial)
+				INSERT INTO balances (id, user_id, value)
+				VALUES ($1, $2, $3)
+			`, uuid.New(), userId, initial)
 
 			if err != nil {
 				tx.Rollback()

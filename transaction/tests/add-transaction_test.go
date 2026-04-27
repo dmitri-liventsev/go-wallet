@@ -5,21 +5,22 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"wallet/gen/transaction"
+	"wallet/gen/wallet"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/vo"
 )
 
 var _ = Describe("transaction management", func() {
-	var payload *transaction.CreatePayload
+	var payload *wallet.CreateTransactionPayload
 	var repo *repositories.TransactionRepository
 
 	Context("no transactions exist in the system", func() {
 		BeforeEach(func() {
-			payload = &transaction.CreatePayload{
+			payload = &wallet.CreateTransactionPayload{
 				State:         entities.Win,
 				Amount:        "0",
+				UserID:        1,
 				TransactionID: uuid.New().String(),
 				SourceType:    entities.Game,
 			}
@@ -28,7 +29,7 @@ var _ = Describe("transaction management", func() {
 		})
 		When("a transaction with 0 amount received", func() {
 			BeforeEach(func(ctx context.Context) {
-				err := client.Create(ctx, payload)
+				err := client.CreateTransaction(ctx, payload)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -43,7 +44,7 @@ var _ = Describe("transaction management", func() {
 		When("a signal to create a transaction with positive amount is received", func() {
 			BeforeEach(func(ctx context.Context) {
 				payload.Amount = "10.01"
-				err := client.Create(ctx, payload)
+				err := client.CreateTransaction(ctx, payload)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -66,7 +67,7 @@ var _ = Describe("transaction management", func() {
 			BeforeEach(func(ctx context.Context) {
 				payload.Amount = "10.01"
 				payload.State = "lost"
-				err = client.Create(ctx, payload)
+				err = client.CreateTransaction(ctx, payload)
 
 			})
 
@@ -79,7 +80,7 @@ var _ = Describe("transaction management", func() {
 			BeforeEach(func(ctx context.Context) {
 				payload.Amount = "-10.01"
 				payload.State = "lost"
-				err := client.Create(ctx, payload)
+				err := client.CreateTransaction(ctx, payload)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -102,7 +103,7 @@ var _ = Describe("transaction management", func() {
 			BeforeEach(func(ctx context.Context) {
 				payload.Amount = "-10.01"
 				payload.State = "win"
-				err = client.Create(ctx, payload)
+				err = client.CreateTransaction(ctx, payload)
 
 			})
 
@@ -115,16 +116,17 @@ var _ = Describe("transaction management", func() {
 	Context("a transaction are exists", func() {
 		var existedTransaction *entities.Transaction
 		BeforeEach(func() {
-			payload = &transaction.CreatePayload{
+			payload = &wallet.CreateTransactionPayload{
 				State:         entities.Win,
 				Amount:        "10.01",
+				UserID:        1,
 				TransactionID: uuid.New().String(),
 				SourceType:    entities.Game,
 			}
 
 			repo = repositories.NewTransactionRepository(DB)
 
-			existedTransaction = entities.NewTransaction(uuid.New().String(), vo.NewAmount(10), entities.Win, entities.Game)
+			existedTransaction = entities.NewTransaction(uuid.New().String(), vo.NewAmount(10), entities.Win, entities.Game, 1)
 			err := repo.Save(existedTransaction)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -132,7 +134,7 @@ var _ = Describe("transaction management", func() {
 		When("a signals to create a transaction with same ID is received", func() {
 			BeforeEach(func(ctx context.Context) {
 				payload.TransactionID = existedTransaction.ID
-				err := client.Create(ctx, payload)
+				err := client.CreateTransaction(ctx, payload)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -147,16 +149,17 @@ var _ = Describe("transaction management", func() {
 	Context("a cancelled transaction exists", func() {
 		var existedTransaction *entities.Transaction
 		BeforeEach(func() {
-			payload = &transaction.CreatePayload{
+			payload = &wallet.CreateTransactionPayload{
 				State:         entities.Win,
 				Amount:        "10.01",
+				UserID:        1,
 				TransactionID: uuid.New().String(),
 				SourceType:    entities.Game,
 			}
 
 			repo = repositories.NewTransactionRepository(DB)
 
-			existedTransaction = entities.NewTransaction(uuid.New().String(), vo.NewAmount(10), entities.Win, entities.Game)
+			existedTransaction = entities.NewTransaction(uuid.New().String(), vo.NewAmount(10), entities.Win, entities.Game, 1)
 			existedTransaction.MarkAsCancelled()
 			err := repo.Save(existedTransaction)
 			Expect(err).NotTo(HaveOccurred())
@@ -165,7 +168,7 @@ var _ = Describe("transaction management", func() {
 		When("a signals to create a transaction with same ID is received", func() {
 			BeforeEach(func(ctx context.Context) {
 				payload.TransactionID = existedTransaction.ID
-				err := client.Create(ctx, payload)
+				err := client.CreateTransaction(ctx, payload)
 				Expect(err).NotTo(HaveOccurred())
 			})
 

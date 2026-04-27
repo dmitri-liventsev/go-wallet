@@ -7,12 +7,12 @@ import (
 	"gorm.io/gorm"
 	"testing"
 	"wallet/config"
-	"wallet/gen/transaction"
+	"wallet/gen/wallet"
 	"wallet/transaction/interfaces"
 	"wallet/transaction/internal/infrastructure/db"
 )
 
-var client *transaction.Client
+var client *wallet.Client
 var DB *gorm.DB
 var _ = BeforeSuite(func(ctx context.Context) {
 	DB = connectToTestDB(ctx)
@@ -23,10 +23,11 @@ var _ = BeforeEach(func() {
 	db.Truncate(DB)
 })
 
-func createTestClient() *transaction.Client {
-	endpoint := transaction.NewCreateEndpoint(interfaces.NewTxController(DB))
-	healthcheck := transaction.NewHealthcheckEndpoint(interfaces.NewTxController(DB))
-	return transaction.NewClient(healthcheck, endpoint)
+func createTestClient() *wallet.Client {
+	txEndpoint := wallet.NewCreateTransactionEndpoint(interfaces.NewTxController(DB))
+	balanceEndpoint := wallet.NewGetBalanceEndpoint(interfaces.NewTxController(DB))
+	healthcheck := wallet.NewHealthcheckEndpoint(interfaces.NewTxController(DB))
+	return wallet.NewClient(healthcheck, txEndpoint, balanceEndpoint)
 }
 
 func connectToTestDB(ctx context.Context) *gorm.DB {

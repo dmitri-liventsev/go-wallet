@@ -4,7 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"time"
-	"wallet/gen/transaction"
+	"wallet/gen/wallet"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/workers"
@@ -15,7 +15,7 @@ import (
 )
 
 var _ = Describe("transaction management", func() {
-	var payloads []*transaction.CreatePayload
+	var payloads []*wallet.CreateTransactionPayload
 	var repo *repositories.TransactionRepository
 	var balanceRepo *repositories.BalanceRepository
 	var expectedBalance int64
@@ -31,7 +31,7 @@ var _ = Describe("transaction management", func() {
 		When("all payloads are sends", func() {
 			BeforeEach(func(ctx context.Context) {
 				for _, payload := range payloads {
-					err := client.Create(ctx, payload)
+					err := client.CreateTransaction(ctx, payload)
 					Expect(err).NotTo(HaveOccurred())
 				}
 			})
@@ -52,7 +52,7 @@ var _ = Describe("transaction management", func() {
 				})
 
 				It("balance are correct2", func() {
-					balance, err := balanceRepo.Get()
+					balance, err := balanceRepo.Get(1)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(balance.Value.Cents).To(Equal(expectedBalance * 100))
@@ -62,8 +62,8 @@ var _ = Describe("transaction management", func() {
 	})
 })
 
-func generatePayloads(limit int) ([]*transaction.CreatePayload, int64) {
-	payloads := make([]*transaction.CreatePayload, 0, limit)
+func generatePayloads(limit int) ([]*wallet.CreateTransactionPayload, int64) {
+	payloads := make([]*wallet.CreateTransactionPayload, 0, limit)
 	expectedBalance := int64(0)
 	rand.Seed(time.Now().UnixNano())
 
@@ -83,9 +83,10 @@ func generatePayloads(limit int) ([]*transaction.CreatePayload, int64) {
 			expectedBalance += 10
 		}
 
-		payloads = append(payloads, &transaction.CreatePayload{
+		payloads = append(payloads, &wallet.CreateTransactionPayload{
 			State:         state,
 			Amount:        amount,
+			UserID:        1,
 			TransactionID: uuid.New().String(),
 			SourceType:    entities.Game,
 		})

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 	"wallet/config"
-	"wallet/gen/transaction"
+	"wallet/gen/wallet"
 	"wallet/transaction/interfaces"
 	"wallet/transaction/interfaces/http"
 	"wallet/transaction/internal/infrastructure/db"
@@ -45,7 +45,7 @@ func runServer() {
 	ctx, cancel := context.WithCancel(ctx)
 
 	txSvc := interfaces.NewTxController(DB)
-	txEndpoints := transaction.NewEndpoints(txSvc)
+	txEndpoints := wallet.NewEndpoints(txSvc)
 	u, err := url.Parse(addr)
 	if err != nil {
 		panic("failed to parse address")

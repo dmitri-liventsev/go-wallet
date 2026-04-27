@@ -1,17 +1,18 @@
 package services
 
 import (
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/vo"
+
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 // BalanceRepository balance storage.
 type BalanceRepository interface {
 	Save(balance *entities.Balance) error
-	Get() (*entities.Balance, error)
+	Get(userId uint64) (*entities.Balance, error)
 }
 
 // Balance service
@@ -25,8 +26,8 @@ var ErrNegativeBalance = errors.New("TotalAmount cannot be negative")
 
 // UpdateBalance updates the current balance by adding the specified amount,
 // returns an error if the balance becomes negative or if any operation fails.
-func (b *Balance) UpdateBalance(amount vo.Amount) error {
-	balance, err := b.balanceProvider.Provide()
+func (b *Balance) UpdateBalance(amount vo.Amount, userId uint64) error {
+	balance, err := b.balanceProvider.Provide(userId)
 	if err != nil {
 		return errors.Wrap(err, "cannot update balance")
 	}
@@ -41,8 +42,8 @@ func (b *Balance) UpdateBalance(amount vo.Amount) error {
 
 // ForceUpdateBalance updates the current balance by adding the specified amount
 // and saves the updated balance without checking for negative values.
-func (b *Balance) ForceUpdateBalance(amount vo.Amount) error {
-	balance, err := b.balanceProvider.Provide()
+func (b *Balance) ForceUpdateBalance(amount vo.Amount, userId uint64) error {
+	balance, err := b.balanceProvider.Provide(userId)
 	if err != nil {
 		return errors.Wrap(err, "cannot update balance")
 	}

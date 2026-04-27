@@ -6,74 +6,116 @@ import (
 
 var _ = API("Wallet", func() {
 	Title("Wallet API")
-	Description("Service for managing user balances, allowing users to retrieve, update, and manage their balance information.")
+	Description("Service for processing user balance transactions")
 
-	Server("Wallet", func() {
+	Server("wallet", func() {
 		Host("localhost", func() {
 			URI("http://localhost:8080")
 		})
 	})
 })
 
-var _ = Service("transaction", func() {
-	Description("The transaction service")
+var _ = Service("wallet", func() {
+	Description("Wallet service")
 
-	HTTP(func() {
-		Path("/transaction")
-	})
-
-	// Healthcheck Method
+	// ---------------------------
+	// Healthcheck
+	// ---------------------------
 	Method("healthcheck", func() {
-		Description("Check if the service is running")
+		Description("Health check")
+
+		Result(func() {
+			Attribute("status", String)
+			Required("status")
+		})
 
 		HTTP(func() {
 			GET("/health")
-			Response(StatusOK, func() {
-				Description("Service is healthy")
-				ContentType("application/json")
-			})
-		})
-
-		Result(func() {
-			Attribute("status", String, "Service status")
-			Required("status")
+			Response(StatusOK)
 		})
 	})
 
-	// Transaction creation method
-	Method("create", func() {
-		Description("Create a new transaction")
+	// ---------------------------
+	// Create Transaction
+	// ---------------------------
+	Method("createTransaction", func() {
+		Description("Process transaction for user")
 
 		Payload(func() {
-			Attribute("state", String, "State of the transaction", func() {
-				Enum("win", "lost")
+			Attribute("userId", UInt64, "User ID", func() {
+				Minimum(1)
+				Example(1)
+			})
+
+			Attribute("state", String, func() {
+				Enum("win", "lose")
 				Example("win")
 			})
-			Attribute("amount", String, "Amount of the transaction", func() {
+
+			Attribute("amount", String, func() {
 				Example("10.15")
 			})
-			Attribute("transactionId", String, "Transaction ID", func() {
-				Example("some generated identificator")
+
+			Attribute("transactionId", String, func() {
+				Example("tx-123")
 			})
-			Attribute("sourceType", String, "Source type header", func() {
+
+			Attribute("sourceType", String, func() {
 				Enum("game", "server", "payment")
 				Example("game")
 			})
-			Required("state", "amount", "transactionId", "sourceType")
+
+			Required("userId", "state", "amount", "transactionId", "sourceType")
 		})
 
+		// 🔥 важно: пустой response
 		Result(Empty)
 
 		HTTP(func() {
-			POST("/")
+			POST("/user/{userId}/transaction")
+
+			Param("userId")
+
 			Header("sourceType:Source-Type")
-			Response(StatusAccepted)
-			Response(StatusBadRequest, func() {
-				Description("Invalid input")
+
+			Response(StatusOK)
+			Response(StatusBadRequest)
+			Response(StatusConflict)
+			Response(StatusInternalServerError)
+		})
+	})
+
+	// ---------------------------
+	// Get Balance
+	// ---------------------------
+	Method("getBalance", func() {
+		Description("Get user balance")
+
+		Payload(func() {
+			Attribute("userId", UInt64, "User ID", func() {
+				Minimum(1)
+				Example(1)
 			})
-			Response(StatusInternalServerError, func() {
-				Description("Internal server error")
+			Required("userId")
+		})
+
+		Result(func() {
+			Attribute("userId", UInt64)
+			Attribute("balance", String, func() {
+				Example("9.25")
 			})
+
+			Required("userId", "balance")
+		})
+
+		HTTP(func() {
+			GET("/user/{userId}/balance")
+
+			Param("userId")
+
+			Response(StatusOK)
+			Response(StatusNotFound)
+			Response(StatusInternalServerError)
 		})
 	})
 })

@@ -3,20 +3,45 @@ package interfaces
 import (
 	"context"
 	"errors"
-	"gorm.io/gorm"
-	balancesvc "wallet/gen/transaction"
-	txsvc "wallet/gen/transaction"
+	"fmt"
+	balancesvc "wallet/gen/wallet"
+	txsvc "wallet/gen/wallet"
 	"wallet/transaction"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/vo"
+
+	"gorm.io/gorm"
 )
 
 type txController struct {
-	repo *repositories.TransactionRepository
+	txRepo      *repositories.TransactionRepository
+	balanceRepo *repositories.BalanceRepository
 }
 
-func (t txController) Create(ctx context.Context, payload *balancesvc.CreatePayload) error {
+func (t txController) GetBalance(ctx context.Context, payload *txsvc.GetBalancePayload) (*txsvc.GetBalanceResult, error) {
+	userID := payload.UserID
+	balance, err := t.balanceRepo.Get(userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if balance == nil {
+		return nil, fmt.Errorf("balance not found for user %d", userID)
+	}
+
+	res := &txsvc.GetBalanceResult{
+		UserID:  userID,
+		Balance: balance.Value.HumanReadable(),
+	}
+
+	return res, nil
+}
+
+func (t txController) CreateTransaction(ctx context.Context, payload *txsvc.CreateTransactionPayload) error {
 	amount, err := vo.NewAmountFromString(payload.Amount)
+	userID := payload.UserID
+
 	if err != nil {
 		return err
 	}
@@ -32,10 +57,11 @@ func (t txController) Create(ctx context.Context, payload *balancesvc.CreatePayl
 		SourceType: payload.SourceType,
 		Action:     payload.State,
 		Amount:     amount,
+		UserID:     userID,
 		ID:         payload.TransactionID,
 	}
 
-	return command.Execute(t.repo)
+	return command.Execute(t.txRepo)
 }
 
 func (t txController) Healthcheck(ctx context.Context) (*balancesvc.HealthcheckResult, error) {
@@ -48,6 +74,7 @@ func (t txController) Healthcheck(ctx context.Context) (*balancesvc.HealthcheckR
 
 func NewTxController(db *gorm.DB) txsvc.Service {
 	return txController{
-		repo: repositories.NewTransactionRepository(db),
+		txRepo:      repositories.NewTransactionRepository(db),
+		balanceRepo: repositories.NewBalanceRepository(db),
 	}
 }

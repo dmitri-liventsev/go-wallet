@@ -1,12 +1,13 @@
 package services_test
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/services"
 	"wallet/transaction/internal/domain/vo"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Transaction service", func() {
@@ -38,7 +39,7 @@ var _ = Describe("Transaction service", func() {
 					})
 
 					It("balance should be increased to the amount", func() {
-						balance, err := balanceRepo.Get()
+						balance, err := balanceRepo.Get(1)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(balance.Value.Cents).To(Equal(int64(10)))
 					})
@@ -62,7 +63,7 @@ var _ = Describe("Transaction service", func() {
 					})
 
 					It("balance should not be decreased to the amount", func() {
-						balance, err := balanceRepo.Get()
+						balance, err := balanceRepo.Get(1)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(balance.Value.Cents).To(Equal(int64(0)))
 					})
@@ -78,7 +79,7 @@ var _ = Describe("Transaction service", func() {
 
 		When("the current balance is 100", func() {
 			BeforeEach(func() {
-				balance := entities.NewBalance(vo.NewTotalAmount(100))
+				balance := entities.NewBalance(vo.NewTotalAmount(100), 1)
 				err := balanceRepo.Save(balance)
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -100,7 +101,7 @@ var _ = Describe("Transaction service", func() {
 					})
 
 					It("balance should be decreased to the amount", func() {
-						balance, err := balanceRepo.Get()
+						balance, err := balanceRepo.Get(1)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(balance.Value.Cents).To(Equal(int64(90)))
 					})

@@ -19,33 +19,41 @@ import (
 const numOfTransactions = 1000
 const numWorkers = 20
 
+var users = []uint64{1, 2, 3}
+
 type Balance struct {
-	ID     string
+	UserID uint64
 	Amount float64
 }
 
 func getRandomServer() string {
-	//list of available servers
 	servers := []string{"localhost:8081", "localhost:8082"}
-
-	rand.Seed(time.Now().UnixNano())
-	index := rand.Intn(len(servers))
-	return servers[index]
+	return servers[rand.Intn(len(servers))]
 }
 
-func worker(wg *sync.WaitGroup, jobs <-chan float64, results chan<- error) {
+type Job struct {
+	UserID uint64
+	Amount float64
+}
+
+func worker(wg *sync.WaitGroup, jobs <-chan Job, results chan<- error) {
 	defer wg.Done()
-	for amount := range jobs {
+
+	for job := range jobs {
 		txID := uuid.New().String()
-		statusCode, err := createTx(txID, amount, getRandomServer())
+
+		statusCode, err := createTx(txID, job.UserID, job.Amount, getRandomServer())
 		if statusCode != 202 {
 			fmt.Println("Error creating transaction. Status code:"+strconv.Itoa(statusCode), err)
 		}
+
 		results <- err
 	}
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	connStr := "user=postgres password=password dbname=txdb host=localhost port=5432 sslmode=disable"
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {
@@ -53,36 +61,41 @@ func main() {
 	}
 	defer db.Close()
 
-	initialID := "0f31adad-bfb6-41d1-aeff-c110ca13cbfa"
+	// -------------------------
+	// init balances for 3 users
+	// -------------------------
+	initial := int64(100000)
 
-	tx, err := db.Begin()
-	if err != nil {
-		log.Fatalf("Failed to begin transaction: %v", err)
-	}
-
-	var initialBalance float64
-	err = tx.QueryRow("SELECT value FROM balances WHERE id = $1", initialID).Scan(&initialBalance)
-
-	if err == sql.ErrNoRows {
-		_, err = tx.Exec(`
-			INSERT INTO balances (id, value)
-			VALUES ($1, $2)
-		`, initialID, 100000)
-		initialBalance = 100000
+	for _, userId := range users {
+		tx, err := db.Begin()
 		if err != nil {
-			tx.Rollback()
-			log.Fatalf("Failed to insert initial balance: %v", err)
+			log.Fatalf("tx begin error: %v", err)
 		}
-	} else if err != nil {
-		tx.Rollback()
-		log.Fatalf("Failed to query current balance: %v", err)
-	} else {
-		fmt.Println("Balance already exists, no action taken.")
-	}
-	err = tx.Commit()
 
-	jobs := make(chan float64, numOfTransactions)
+		var existing int64
+		err = tx.QueryRow("SELECT value FROM balances WHERE user_id = $1", userId).Scan(&existing)
+
+		if err == sql.ErrNoRows {
+			_, err = tx.Exec(`
+				INSERT INTO balances (user_id, value)
+				VALUES ($1, $2)
+			`, userId, initial)
+
+			if err != nil {
+				tx.Rollback()
+				log.Fatalf("insert balance error: %v", err)
+			}
+		}
+
+		tx.Commit()
+	}
+
+	// -------------------------
+	// workers
+	// -------------------------
+	jobs := make(chan Job, numOfTransactions)
 	results := make(chan error, numOfTransactions)
+
 	var wg sync.WaitGroup
 
 	for i := 0; i < numWorkers; i++ {
@@ -90,49 +103,68 @@ func main() {
 		go worker(&wg, jobs, results)
 	}
 
-	rand.Seed(time.Now().UnixNano())
-	var sum float64
-	for i := 0; i < numOfTransactions; i++ {
-		intNum := rand.Intn(2001) - 1000
-		floatNum := float64(intNum) / 100
-		sum += floatNum
-		jobs <- floatNum
+	// -------------------------
+	// generate load
+	// -------------------------
+	expected := map[uint64]float64{
+		1: 100000,
+		2: 100000,
+		3: 100000,
 	}
 
-	floatInitialBalance := float64(initialBalance / 100)
-	expectedBalance := floatInitialBalance + sum
-	fmt.Printf("Expected Balance: %.2f\n", expectedBalance*100)
+	for i := 0; i < numOfTransactions; i++ {
+		userId := users[rand.Intn(len(users))]
+
+		intNum := rand.Intn(2001) - 1000
+		amount := float64(intNum) / 100
+
+		expected[userId] += amount
+
+		jobs <- Job{
+			UserID: userId,
+			Amount: amount,
+		}
+	}
 
 	close(jobs)
 
 	wg.Wait()
-
 	close(results)
+
 	for err := range results {
 		if err != nil {
-			log.Printf("Error occurred during transaction processing: %v", err)
+			log.Printf("tx error: %v", err)
 		}
 	}
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 
-	var finalBalance float64
-	err = db.QueryRow("SELECT value FROM balances WHERE id=$1", initialID).Scan(&finalBalance)
-	if err != nil {
-		log.Fatalf("Failed to retrieve final balance: %v", err)
+	// -------------------------
+	// validate results
+	// -------------------------
+	for _, userId := range users {
+		var final int64
+		err := db.QueryRow("SELECT value FROM balances WHERE user_id=$1", userId).Scan(&final)
+		if err != nil {
+			log.Fatalf("failed to get balance: %v", err)
+		}
+
+		fmt.Printf("User %d final balance: %.2f | expected: %.2f\n",
+			userId,
+			float64(final)/100,
+			expected[userId]/100,
+		)
 	}
-
-	fmt.Printf("Final Balance in Database: %.2f\n", finalBalance)
 }
 
-func createTx(txID string, amount float64, host string) (int, error) {
-	action := "win"
+func createTx(txID string, userID uint64, amount float64, host string) (int, error) {
+	state := "win"
 	if amount < 0 {
-		action = "lost"
+		state = "lose"
 	}
 
 	payload := map[string]string{
-		"state":         action,
+		"state":         state,
 		"amount":        fmt.Sprintf("%.2f", amount),
 		"transactionId": txID,
 	}
@@ -142,7 +174,11 @@ func createTx(txID string, amount float64, host string) (int, error) {
 		return 0, err
 	}
 
-	req, err := http.NewRequest("POST", "http://"+host+"/transaction", bytes.NewBuffer(jsonPayload))
+	req, err := http.NewRequest(
+		"POST",
+		fmt.Sprintf("http://%s/user/%d/transaction", host, userID),
+		bytes.NewBuffer(jsonPayload),
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -155,7 +191,6 @@ func createTx(txID string, amount float64, host string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
 	defer resp.Body.Close()
 
 	return resp.StatusCode, nil

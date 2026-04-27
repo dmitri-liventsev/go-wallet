@@ -66,19 +66,31 @@ docker-compose up -d
 The API follows the OpenAPI 3.0.3 specification. The OpenAPI yaml file can be found in the **gen/http** directory.
 
 ## API Endpoints
+
 ### Create Transaction
-* **Endpoint: /transaction**
-* **Method: POST**
+
+* **Endpoint:** `/user/{userId}/transaction`
+* **Method:** `POST`
+
 * **Headers:**
-  * Source-Type: Source type header (required, example: game, enum: game, server, payment)
+  * `Source-Type` *(required)*  
+    Allowed values: `game`, `server`, `payment`
+
+* **Path Parameters:**
+  * `userId` *(uint64, required)*  
+    Example: `1`
+
 * **Request Body:**
-  * amount: Amount of the transaction (string, example: 10.15)
-  * state: State of the transaction (string, enum: win, lost, example: win)
-  * transactionId: Transaction ID (string, example: some generated identificator)
+  * `amount` *(string)*: Amount of the transaction (example: `10.15`)
+  * `state` *(string)*: State of the transaction  
+    Allowed values: `win`, `lose` (example: `win`)
+  * `transactionId` *(string)*: Transaction ID (example: `some generated identifier`)
+
 * **Responses:**
-  * 202 Accepted: Transaction accepted
-  * 400 Bad Request: Invalid input
-  * 500 Internal Server Error: Internal server error
+  * `200 OK`: Transaction successfully processed
+  * `400 Bad Request`: Invalid input
+  * `409 Conflict`: Duplicate transactionId (already processed)
+  * `500 Internal Server Error`: Internal server error
 
 Example request body:
 
@@ -89,6 +101,28 @@ Example request body:
   "transactionId": "some generated identificator"
 }
 ```
+
+### Get User Balance
+
+* **Endpoint:** `/user/{userId}/balance`
+* **Method:** `GET`
+
+* **Path Parameters:**
+  * `userId` *(uint64, required)*  
+    Example: `1`
+
+* **Responses:**
+  * `200 OK`: Returns current user balance
+  * `404 Not Found`: User or balance not found
+  * `500 Internal Server Error`: Internal server error
+
+* **Response Body:**
+```json
+{
+  "userId": 1,
+  "balance": "9.25"
+}
+````
 
 ## Database Access
 The current state of the balance can be viewed by connecting to the PostgreSQL database using the following credentials:

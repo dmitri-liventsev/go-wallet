@@ -1,14 +1,14 @@
-// mockgen -source=correction.go -destination=internal/mocks/mock_correction_processor.go -package=mocks CorrectionProcessor
 package workers_test
 
 import (
 	"context"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"gorm.io/gorm"
 	"testing"
 	"wallet/config"
 	"wallet/transaction/internal/infrastructure/db"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"gorm.io/gorm"
 )
 
 var DB *gorm.DB

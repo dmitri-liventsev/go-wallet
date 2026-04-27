@@ -3,13 +3,14 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
+	"wallet/transaction/internal/domain/entities"
+
 	"github.com/spf13/viper"
 	"goa.design/clue/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"strings"
-	"wallet/transaction/internal/domain/entities"
 )
 
 // DbConnection holds configuration details for connecting to a database.
@@ -80,10 +81,6 @@ func (dbConn DbConnection) ConnectToSchema(ctx context.Context, schemaName strin
 // RunAutoMigrations performs auto-migrations for the Transaction, Correction, and Balance entities.
 func RunAutoMigrations(db *gorm.DB) error {
 	err := db.AutoMigrate(&entities.Transaction{})
-	if err != nil {
-		return err
-	}
-	err = db.AutoMigrate(&entities.Correction{})
 	if err != nil {
 		return err
 	}

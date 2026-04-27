@@ -2,10 +2,11 @@ package entities
 
 import (
 	"encoding/json"
-	"github.com/google/uuid"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"time"
 	"wallet/transaction/internal/domain/vo"
+
+	"github.com/google/uuid"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 // Win action.
@@ -45,6 +46,7 @@ type Transaction struct {
 	SourceType string     `gorm:"type:varchar(10);check:source_type IN ('game','server','payment', 'internal')"`
 	Action     string     `gorm:"type:varchar(10);check:action IN ('win','lost')"`
 	Amount     vo.Amount  `gorm:"type:integer"`
+	UserID     uint64     `gorm:"type:integer"`
 	LockUuid   *uuid.UUID `gorm:"type:uuid;default:null"`
 	LockedAt   *time.Time `gorm:"type:timestamptz;default:null"`
 	CreatedAt  time.Time  `gorm:"type:timestamptz;default:current_timestamp;index"`
@@ -82,12 +84,13 @@ func (t *Transaction) Lock(lockUuid uuid.UUID) {
 }
 
 // NewTransaction returns new Transaction entity.
-func NewTransaction(id string, amount vo.Amount, action string, sourceType string) *Transaction {
+func NewTransaction(id string, amount vo.Amount, action string, sourceType string, userID uint64) *Transaction {
 	return &Transaction{
 		Status:     New,
 		Action:     action,
 		SourceType: sourceType,
 		Amount:     amount,
+		UserID:     userID,
 		ID:         id,
 	}
 }

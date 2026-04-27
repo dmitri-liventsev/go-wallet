@@ -1,11 +1,12 @@
 package services
 
 import (
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/vo"
+
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 // BalanceCalculator actual balance calculator
@@ -18,8 +19,8 @@ type BalanceProvider struct {
 	calculator BalanceCalculator
 }
 
-func (b BalanceProvider) Provide() (*entities.Balance, error) {
-	balance, err := b.repo.Get()
+func (b BalanceProvider) Provide(userId uint64) (*entities.Balance, error) {
+	balance, err := b.repo.Get(userId)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot provide balance")
 	}
@@ -33,7 +34,7 @@ func (b BalanceProvider) Provide() (*entities.Balance, error) {
 		return nil, errors.Wrap(err, "cannot provide balance")
 	}
 
-	balance = entities.NewBalance(vo.NewTotalAmount(calculatedValue))
+	balance = entities.NewBalance(vo.NewTotalAmount(calculatedValue), userId)
 	err = b.repo.Save(balance)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot provide balance")

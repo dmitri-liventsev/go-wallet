@@ -26,6 +26,11 @@ func (t TotalAmount) String() string {
 	return fmt.Sprintf("%.2f", float64(t.Cents)/100)
 }
 
+// HumanReadable Returns formatted amount
+func (t TotalAmount) HumanReadable() string {
+	return fmt.Sprintf("%.2f", float64(t.Cents)/100)
+}
+
 // Value implements the Valuer interface and returns the total amount's value as a driver.Value.
 func (t TotalAmount) Value() (driver.Value, error) {
 	return t.Cents, nil

@@ -2,9 +2,9 @@ package repositories
 
 import (
 	"errors"
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/entities"
+
+	"gorm.io/gorm"
 )
 
 // BalanceRepository Balance repository
@@ -18,11 +18,10 @@ func (repo BalanceRepository) Save(balance *entities.Balance) error {
 }
 
 // Get retrieves a balance entity from the database by its ID.
-func (repo BalanceRepository) Get() (*entities.Balance, error) {
+func (repo BalanceRepository) Get(userId uint64) (*entities.Balance, error) {
 	var balance entities.Balance
-	balanceID := uuid.MustParse(entities.BalanceID)
 
-	if err := repo.db.Where("id = ?", balanceID).Limit(1).First(&balance).Error; err != nil {
+	if err := repo.db.Where("user_id = ?", userId).Limit(1).First(&balance).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}

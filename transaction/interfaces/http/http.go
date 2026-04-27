@@ -10,11 +10,11 @@ import (
 	"goa.design/clue/debug"
 	"goa.design/clue/log"
 	goahttp "goa.design/goa/v3/http"
-	txsrv "wallet/gen/http/transaction/server"
-	"wallet/gen/transaction"
+	txsrv "wallet/gen/http/wallet/server"
+	"wallet/gen/wallet"
 )
 
-func HandleHTTPServer(ctx context.Context, u *url.URL, endpoints *transaction.Endpoints, wg *sync.WaitGroup, errc chan error, dbg bool) {
+func HandleHTTPServer(ctx context.Context, u *url.URL, endpoints *wallet.Endpoints, wg *sync.WaitGroup, errc chan error, dbg bool) {
 	var (
 		dec = goahttp.RequestDecoder
 		enc = goahttp.ResponseEncoder

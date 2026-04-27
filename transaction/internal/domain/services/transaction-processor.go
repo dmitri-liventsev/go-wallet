@@ -2,9 +2,10 @@ package services
 
 import (
 	"errors"
-	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
+
+	"gorm.io/gorm"
 )
 
 // TransactionProcessor handles the processing of transactions,
@@ -20,9 +21,9 @@ func (t TransactionProcessor) Execute(transaction *entities.Transaction) error {
 	var err error
 
 	if transaction.IsInternal() {
-		err = t.BalanceService.ForceUpdateBalance(transaction.Amount)
+		err = t.BalanceService.ForceUpdateBalance(transaction.Amount, transaction.UserID)
 	} else {
-		err = t.BalanceService.UpdateBalance(transaction.Amount)
+		err = t.BalanceService.UpdateBalance(transaction.Amount, transaction.UserID)
 	}
 
 	if err != nil && errors.Is(err, ErrNegativeBalance) {

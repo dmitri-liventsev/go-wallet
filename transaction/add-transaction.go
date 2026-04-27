@@ -12,6 +12,7 @@ type AddTransaction struct {
 	SourceType string
 	Action     string
 	Amount     vo.Amount
+	UserID     uint64
 	ID         string
 }
 
@@ -26,7 +27,7 @@ func (a *AddTransaction) Execute(repo TransactionStorage) error {
 	if a.Amount.Equal(vo.NewAmount(0)) {
 		return nil
 	}
-	transaction := entities.NewTransaction(a.ID, a.Amount, a.Action, a.SourceType)
+	transaction := entities.NewTransaction(a.ID, a.Amount, a.Action, a.SourceType, a.UserID)
 
 	err := repo.Create(transaction)
 	if err != nil && !errors.Is(err, repositories.ErrDuplicateKey) {

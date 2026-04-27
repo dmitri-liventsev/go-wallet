@@ -1,13 +1,14 @@
 package services_test
 
 import (
-	"github.com/google/uuid"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/services"
 	"wallet/transaction/internal/domain/vo"
+
+	"github.com/google/uuid"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("check balance initialization and providing", func() {
@@ -28,7 +29,7 @@ var _ = Describe("check balance initialization and providing", func() {
 				)
 
 				BeforeEach(func() {
-					balance, err = balanceProvider.Provide()
+					balance, err = balanceProvider.Provide(1)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
@@ -46,17 +47,17 @@ var _ = Describe("check balance initialization and providing", func() {
 
 			BeforeEach(func() {
 				repo := repositories.NewTransactionRepository(DB)
-				transaction := entities.NewTransaction(uuid.New().String(), vo.NewAmount(10), entities.Win, entities.Game)
+				transaction := entities.NewTransaction(uuid.New().String(), vo.NewAmount(10), entities.Win, entities.Game, 1)
 				transaction.MarkAsDone()
 
 				err := repo.Create(transaction)
 				Expect(err).ToNot(HaveOccurred())
 
-				balance, err = balanceProvider.Provide()
+				balance, err = balanceProvider.Provide(1)
 			})
 
 			BeforeEach(func() {
-				balance, err = balanceProvider.Provide()
+				balance, err = balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -75,12 +76,12 @@ var _ = Describe("check balance initialization and providing", func() {
 
 		BeforeEach(func() {
 			repo := repositories.NewBalanceRepository(DB)
-			err := repo.Save(entities.NewBalance(vo.NewTotalAmount(int64(11))))
+			err := repo.Save(entities.NewBalance(vo.NewTotalAmount(int64(11)), 1))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		BeforeEach(func() {
-			balance, err = balanceProvider.Provide()
+			balance, err = balanceProvider.Provide(1)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -104,12 +105,12 @@ var _ = Describe("check balance updating", func() {
 	Context("balance are zero", func() {
 		When("positive transaction received", func() {
 			BeforeEach(func() {
-				err := balanceService.UpdateBalance(vo.NewAmount(10))
+				err := balanceService.UpdateBalance(vo.NewAmount(10), 1)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should increment balance", func() {
-				balance, err := balanceProvider.Provide()
+				balance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(balance.Value.Value()).To(Equal(int64(10)))
 			})
@@ -117,7 +118,7 @@ var _ = Describe("check balance updating", func() {
 		When("negatiove transaction received", func() {
 			var err error
 			BeforeEach(func() {
-				err = balanceService.UpdateBalance(vo.NewAmount(-10))
+				err = balanceService.UpdateBalance(vo.NewAmount(-10), 1)
 			})
 
 			It("error should be rised", func() {
@@ -125,7 +126,7 @@ var _ = Describe("check balance updating", func() {
 			})
 
 			It("should not increment balance", func() {
-				balance, err := balanceProvider.Provide()
+				balance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(balance.Value.Value()).To(Equal(int64(0)))
 			})

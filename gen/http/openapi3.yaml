@@ -1,27 +1,99 @@
 openapi: 3.0.3
 info:
     title: Wallet API
-    description: Service for managing user balances, allowing users to retrieve, update, and manage their balance information.
+    description: Service for processing user balance transactions
     version: 0.0.1
 servers:
     - url: http://localhost:8080
 paths:
-    /transaction:
+    /health:
+        get:
+            tags:
+                - wallet
+            summary: healthcheck wallet
+            description: Health check
+            operationId: wallet#healthcheck
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HealthcheckResponseBody'
+                            example:
+                                status: Natus et quasi quod.
+    /user/{userId}/balance:
+        get:
+            tags:
+                - wallet
+            summary: getBalance wallet
+            description: Get user balance
+            operationId: wallet#getBalance
+            parameters:
+                - name: userId
+                  in: path
+                  description: User ID
+                  required: true
+                  schema:
+                    type: integer
+                    description: User ID
+                    example: 1
+                    format: int64
+                    minimum: 1
+                  example: 1
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetBalanceOKResponseBody'
+                            example:
+                                balance: "9.25"
+                                userId: 17231541303881807787
+                "404":
+                    description: Not Found response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetBalanceOKResponseBody'
+                            example:
+                                balance: "9.25"
+                                userId: 13119423219798380334
+                "500":
+                    description: Internal Server Error response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetBalanceOKResponseBody'
+                            example:
+                                balance: "9.25"
+                                userId: 9089563475417464449
+    /user/{userId}/transaction:
         post:
             tags:
-                - transaction
-            summary: create transaction
-            description: Create a new transaction
-            operationId: transaction#create
+                - wallet
+            summary: createTransaction wallet
+            description: Process transaction for user
+            operationId: wallet#createTransaction
             parameters:
+                - name: userId
+                  in: path
+                  description: User ID
+                  required: true
+                  schema:
+                    type: integer
+                    description: User ID
+                    example: 1
+                    format: int64
+                    minimum: 1
+                  example: 1
                 - name: Source-Type
                   in: header
-                  description: Source type header
                   allowEmptyValue: true
                   required: true
                   schema:
                     type: string
-                    description: Source type header
                     example: game
                     enum:
                         - game
@@ -33,73 +105,71 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/CreateRequestBody'
+                            $ref: '#/components/schemas/CreateTransactionRequestBody'
                         example:
                             amount: "10.15"
                             state: win
-                            transactionId: some generated identificator
-            responses:
-                "202":
-                    description: Accepted response.
-                "400":
-                    description: Invalid input
-                "500":
-                    description: Internal server error
-    /transaction/health:
-        get:
-            tags:
-                - transaction
-            summary: healthcheck transaction
-            description: Check if the service is running
-            operationId: transaction#healthcheck
+                            transactionId: tx-123
             responses:
                 "200":
-                    description: Service is healthy
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/HealthcheckResponseBody'
-                            example:
-                                status: Repellat natus et.
+                    description: OK response.
+                "400":
+                    description: Bad Request response.
+                "409":
+                    description: Conflict response.
+                "500":
+                    description: Internal Server Error response.
 components:
     schemas:
-        CreateRequestBody:
+        CreateTransactionRequestBody:
             type: object
             properties:
                 amount:
                     type: string
-                    description: Amount of the transaction
                     example: "10.15"
                 state:
                     type: string
-                    description: State of the transaction
                     example: win
                     enum:
                         - win
-                        - lost
+                        - lose
                 transactionId:
                     type: string
-                    description: Transaction ID
-                    example: some generated identificator
+                    example: tx-123
             example:
                 amount: "10.15"
                 state: win
-                transactionId: some generated identificator
+                transactionId: tx-123
             required:
                 - state
                 - amount
                 - transactionId
+        GetBalanceOKResponseBody:
+            type: object
+            properties:
+                balance:
+                    type: string
+                    example: "9.25"
+                userId:
+                    type: integer
+                    example: 10956105879580666055
+                    format: int64
+            example:
+                balance: "9.25"
+                userId: 2646845335295583452
+            required:
+                - userId
+                - balance
         HealthcheckResponseBody:
             type: object
             properties:
                 status:
                     type: string
-                    description: Service status
-                    example: Qui ipsa architecto.
+                    example: Quos rerum.
             example:
-                status: Rem ipsum velit aliquid quia delectus quos.
+                status: Voluptas omnis.
             required:
                 - status
 tags:
-    - name: transaction
-      description: The transaction service
+    - name: wallet
+      description: Wallet service

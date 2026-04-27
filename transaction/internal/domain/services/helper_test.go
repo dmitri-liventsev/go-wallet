@@ -1,12 +1,13 @@
 package services_test
 
 import (
-	"github.com/google/uuid"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/vo"
+
+	"github.com/google/uuid"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 func createTransaction(amount int) *entities.Transaction {
@@ -33,7 +34,7 @@ func createTransactionWithStatus(amount int, status string) *entities.Transactio
 	}
 
 	transactionRepo := repositories.NewTransactionRepository(DB)
-	transaction := entities.NewTransaction(uuid.New().String(), vo.NewAmount(amount), action, entities.Game)
+	transaction := entities.NewTransaction(uuid.New().String(), vo.NewAmount(amount), action, entities.Game, 1)
 	transaction.Status = status
 
 	err := transactionRepo.Save(transaction)

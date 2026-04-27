@@ -1,14 +1,15 @@
 package workers_test
 
 import (
-	"github.com/google/uuid"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/services"
 	"wallet/transaction/internal/domain/vo"
 	"wallet/transaction/workers"
+
+	"github.com/google/uuid"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("balance worker processing", func() {
@@ -24,7 +25,7 @@ var _ = Describe("balance worker processing", func() {
 				balanceWorker = workers.NewBalanceWorker(DB, uuid.New())
 
 				balanceProvider = services.NewBalanceProvider(DB)
-				balance, err := balanceProvider.Provide()
+				balance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				startBalance = balance.Value
 
@@ -33,7 +34,7 @@ var _ = Describe("balance worker processing", func() {
 			})
 
 			It("balance should not be changed", func() {
-				newBalance, err := balanceProvider.Provide()
+				newBalance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(newBalance.Value.String()).To(Equal(startBalance.String()))
 			})
@@ -54,7 +55,7 @@ var _ = Describe("balance worker processing", func() {
 
 			BeforeEach(func() {
 				balanceProvider = services.NewBalanceProvider(DB)
-				balance, err := balanceProvider.Provide()
+				balance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				startBalance = balance.Value
 
@@ -65,7 +66,7 @@ var _ = Describe("balance worker processing", func() {
 			})
 
 			It("balance should be updated", func() {
-				newBalance, err := balanceProvider.Provide()
+				newBalance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(newBalance.Value.String()).ToNot(Equal(startBalance.String()))
 			})
@@ -89,7 +90,7 @@ var _ = Describe("balance worker processing", func() {
 
 			BeforeEach(func() {
 				balanceProvider = services.NewBalanceProvider(DB)
-				balance, err := balanceProvider.Provide()
+				balance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				startBalance = balance.Value
 
@@ -100,7 +101,7 @@ var _ = Describe("balance worker processing", func() {
 			})
 
 			It("balance should not be changed", func() {
-				newBalance, err := balanceProvider.Provide()
+				newBalance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(newBalance.Value.String()).To(Equal(startBalance.String()))
 			})
@@ -126,7 +127,7 @@ var _ = Describe("balance worker processing", func() {
 
 			BeforeEach(func() {
 				balanceProvider = services.NewBalanceProvider(DB)
-				balance, err := balanceProvider.Provide()
+				balance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				startBalance = balance.Value
 
@@ -137,7 +138,7 @@ var _ = Describe("balance worker processing", func() {
 			})
 
 			It("balance should be changed", func() {
-				newBalance, err := balanceProvider.Provide()
+				newBalance, err := balanceProvider.Provide(1)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(newBalance.Value.String()).ToNot(Equal(startBalance.String()))
 			})

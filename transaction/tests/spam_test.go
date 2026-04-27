@@ -2,15 +2,16 @@ package tests
 
 import (
 	"context"
-	"github.com/google/uuid"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"math/rand"
 	"time"
 	"wallet/gen/transaction"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/workers"
+
+	"github.com/google/uuid"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("transaction management", func() {
@@ -43,7 +44,7 @@ var _ = Describe("transaction management", func() {
 
 			When("transactions are processed", func() {
 				BeforeEach(func(ctx context.Context) {
-					worker := workers.NewBalanceWorker(DB)
+					worker := workers.NewBalanceWorker(DB, uuid.New())
 					for i := 0; i < numOfTransactions; i++ {
 						err := worker.Execute()
 						Expect(err).NotTo(HaveOccurred())

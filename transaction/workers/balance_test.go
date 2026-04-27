@@ -29,7 +29,7 @@ var _ = Describe("balance worker processing", func() {
 				startBalance = balance.Value
 
 				err = balanceWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(Or(BeNil(), MatchError(workers.ErrNoWork), MatchError(workers.ErrLockConflict)))
 			})
 
 			It("balance should not be changed", func() {
@@ -96,7 +96,7 @@ var _ = Describe("balance worker processing", func() {
 				balanceWorker = workers.NewBalanceWorker(DB, uuid.New())
 
 				err = balanceWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(Or(BeNil(), MatchError(workers.ErrNoWork), MatchError(workers.ErrLockConflict)))
 			})
 
 			It("balance should not be changed", func() {
@@ -172,7 +172,7 @@ var _ = Describe("balance worker processing", func() {
 				transactionRepository = repositories.NewTransactionRepository(DB)
 
 				err := balanceWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(Or(BeNil(), MatchError(workers.ErrNoWork), MatchError(workers.ErrLockConflict)))
 			})
 
 			It("only first transaction should be processed", func() {

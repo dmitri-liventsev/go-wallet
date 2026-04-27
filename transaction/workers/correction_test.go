@@ -9,6 +9,10 @@ import (
 	"wallet/transaction/workers"
 )
 
+// softOutcome matches a nil error or either of the two soft-outcome sentinels
+// returned by Execute() when there is no work or a lock is owned by another worker.
+var softOutcome = Or(BeNil(), MatchError(workers.ErrNoWork), MatchError(workers.ErrLockConflict))
+
 var _ = Describe("correction worker", func() {
 	Context("correction does not exists", func() {
 		When("correction workers started", func() {
@@ -27,7 +31,7 @@ var _ = Describe("correction worker", func() {
 				tranasction = createDoneTransaction(10)
 
 				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(softOutcome)
 			})
 
 			It("should create new correction", func() {
@@ -78,7 +82,7 @@ var _ = Describe("correction worker", func() {
 				tranasction = createDoneTransaction(10)
 
 				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(softOutcome)
 			})
 
 			It("should not create new correction", func() {
@@ -178,7 +182,7 @@ var _ = Describe("correction worker", func() {
 				tranasction = createDoneTransaction(10)
 
 				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(softOutcome)
 			})
 
 			It("should not create new correction", func() {
@@ -243,7 +247,7 @@ var _ = Describe("correction worker", func() {
 
 			It("should unlock correction", func() {
 				err := correctionWorker.Execute()
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(softOutcome)
 
 				correction, err := correctionRepo.FindByID(uuid.MustParse(entities.CorrectionId))
 				Expect(err).ToNot(HaveOccurred())

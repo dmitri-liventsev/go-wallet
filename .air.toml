@@ -1,8 +1,11 @@
-# Включаем watch mode
-watch_mode = "full"
+root = "."
+tmp_dir = "tmp"
 
 [build]
-  include_ext = ["go"]
-  src_dir = "transaction/cmd"
-[runner]
-  cmd = "go run main.go -debug=true"
+cmd = "go build -buildvcs=false -o tmp/main ./transaction/cmd"
+bin = "tmp/main"
+
+[watch]
+include_dir = ["transaction"]
+
+exclude_dir = ["tmp", "vendor"]

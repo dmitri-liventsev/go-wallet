@@ -99,6 +99,11 @@ The current state of the balance can be viewed by connecting to the PostgreSQL d
 * **Password: password**
 * **Database: txdb**
 
+
+## Concurrency Stress Test
+
+A concurrency stress-test utility is available in the `concurrency` folder. It can be used to validate correct balance calculation and idempotent transaction processing under concurrent load. Please refer to the README inside that folder for usage instructions.
+
 ## Stopping the Services
 To stop the services, use:
 

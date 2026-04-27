@@ -24,6 +24,16 @@ You can configure the utility by modifying the following constants in the source
 - **`numOfTransactions`**: The number of transactions that will be sent to the servers.
 - **`servers`**: A list of host instances where the application is running.
 
+### Sample:
+
+```bash
+go run main.go \
+--numOfTransactions=1000 \
+--numWorkers=20 \
+--connStr="user=postgres password=password dbname=txdb host=localhost port=5432 sslmode=disable" \
+--servers="localhost:8081,localhost:8082"
+````
+
 ## Important Notes
 
 - **Correction Process**: The application has a built-in correction mechanism that runs every 10 minutes. This utility does not track these corrections, so the expected and actual balances may differ if a correction occurs during the test run.

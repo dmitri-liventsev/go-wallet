@@ -14,7 +14,7 @@ type UserLockRepository struct {
 
 func (r *UserLockRepository) TryLockUser(ctx context.Context, userId int64, uuid uuid.UUID, ttl time.Duration) (bool, error) {
 	res := r.db.WithContext(ctx).Exec(`
-		INSERT INTO user_lock (user_id, lock_uuid, expires_at, updated_at)
+		INSERT INTO user_locks (user_id, lock_uuid, expires_at, updated_at)
 		VALUES (?, ?, NOW() + INTERVAL '? seconds', NOW())
 		ON CONFLICT (user_id)
 		DO UPDATE SET 
@@ -33,7 +33,7 @@ func (r *UserLockRepository) TryLockUser(ctx context.Context, userId int64, uuid
 func (r *UserLockRepository) UnlockUser(ctx context.Context, userId int64, uuid uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Exec(`
-				DELETE FROM user_lock WHERE user_id = ? AND lock_uuid = ?
+				DELETE FROM user_locks WHERE user_id = ? AND lock_uuid = ?
 		`, userId, uuid).Error
 }
 

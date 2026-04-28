@@ -1,6 +1,7 @@
 package e2e_test
 
 import (
+	"context"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 
@@ -24,8 +25,8 @@ var _ = Describe("transaction сreation", func() {
 				repo = repositories.NewTransactionRepository(DB)
 			})
 
-			It("should successfully save the transaction", func() {
-				transaction, err := repo.GetNextTransaction()
+			It("should successfully save the transaction", func(ctx context.Context) {
+				transaction, err := repo.GetNextTransaction(ctx)
 
 				Expect(transaction.ID).To(Equal(transactionId))
 				Expect(err).NotTo(HaveOccurred())

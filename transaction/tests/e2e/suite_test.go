@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	"goa.design/clue/log"
 	"gorm.io/gorm"
+	"net"
 	"net/url"
 	"sync"
 	"testing"
@@ -54,6 +55,15 @@ func runServer() {
 	errc := make(chan error)
 
 	http.HandleHTTPServer(ctx, u, txEndpoints, &wg, errc, false)
+
+	Eventually(func() error {
+		conn, err := net.Dial("tcp", "0.0.0.0:8080")
+		if err != nil {
+			return err
+		}
+		conn.Close()
+		return nil
+	}, "5s", "10ms").Should(Succeed())
 
 	DeferCleanup(func() {
 		cancel()

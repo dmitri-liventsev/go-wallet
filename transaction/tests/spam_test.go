@@ -37,8 +37,8 @@ var _ = Describe("transaction management", func() {
 				}
 			})
 
-			It("saves each trasnactions", func() {
-				transactions, err := repo.GetAllTransactions()
+			It("saves each trasnactions", func(ctx context.Context) {
+				transactions, err := repo.GetAllTransactions(ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(transactions)).To(Equal(numOfTransactions))
 			})
@@ -47,7 +47,7 @@ var _ = Describe("transaction management", func() {
 				BeforeEach(func(ctx context.Context) {
 					worker := workers.NewBalanceWorker(DB, uuid.New())
 					for i := 0; i < numOfTransactions; i++ {
-						err := worker.Execute()
+						err := worker.Execute(ctx)
 						if errors.Is(err, workers.ErrNoWork) {
 							break
 						}
@@ -55,8 +55,8 @@ var _ = Describe("transaction management", func() {
 					}
 				})
 
-				It("balance are correct2", func() {
-					balance, err := balanceRepo.Get(1)
+				It("balance are correct2", func(ctx context.Context) {
+					balance, err := balanceRepo.Get(ctx, 1)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(balance.Value.Cents).To(Equal(expectedBalance * 100))

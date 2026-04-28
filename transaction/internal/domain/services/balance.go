@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/vo"
@@ -11,8 +12,8 @@ import (
 
 // BalanceRepository balance storage.
 type BalanceRepository interface {
-	Save(balance *entities.Balance) error
-	Get(userId uint64) (*entities.Balance, error)
+	Save(ctx context.Context, balance *entities.Balance) error
+	Get(ctx context.Context, userId uint64) (*entities.Balance, error)
 }
 
 // Balance service
@@ -26,8 +27,8 @@ var ErrNegativeBalance = errors.New("TotalAmount cannot be negative")
 
 // UpdateBalance updates the current balance by adding the specified amount,
 // returns an error if the balance becomes negative or if any operation fails.
-func (b *Balance) UpdateBalance(amount vo.Amount, userId uint64) error {
-	balance, err := b.balanceProvider.Provide(userId)
+func (b *Balance) UpdateBalance(ctx context.Context, amount vo.Amount, userId uint64) error {
+	balance, err := b.balanceProvider.Provide(ctx, userId)
 	if err != nil {
 		return errors.Wrap(err, "cannot update balance")
 	}
@@ -37,19 +38,19 @@ func (b *Balance) UpdateBalance(amount vo.Amount, userId uint64) error {
 		return ErrNegativeBalance
 	}
 
-	return b.repo.Save(balance)
+	return b.repo.Save(ctx, balance)
 }
 
 // ForceUpdateBalance updates the current balance by adding the specified amount
 // and saves the updated balance without checking for negative values.
-func (b *Balance) ForceUpdateBalance(amount vo.Amount, userId uint64) error {
-	balance, err := b.balanceProvider.Provide(userId)
+func (b *Balance) ForceUpdateBalance(ctx context.Context, amount vo.Amount, userId uint64) error {
+	balance, err := b.balanceProvider.Provide(ctx, userId)
 	if err != nil {
 		return errors.Wrap(err, "cannot update balance")
 	}
 	balance.Value = balance.Value.AddAmount(amount)
 
-	return b.repo.Save(balance)
+	return b.repo.Save(ctx, balance)
 }
 
 // NewBalanceService returns an instance of Balance service.

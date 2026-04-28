@@ -7,41 +7,39 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/uuid"
-	"goa.design/clue/log"
-	"gorm.io/gorm"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/services"
+
+	"github.com/google/uuid"
+	"goa.design/clue/log"
+	"gorm.io/gorm"
 )
 
 const (
 	balanceWorkerCycleDelay = 100 * time.Millisecond
-	balanceWorkerRetryDelay = time.Second     // transient DB / processing error
-	balanceWorkerFatalDelay = 5 * time.Second // panic or unexpected system failure
+	balanceWorkerRetryDelay = time.Second
+	balanceWorkerFatalDelay = 5 * time.Second
+
+	userLockTTL       = 30 * time.Second
+	usersBatchSize    = 50
+	transactionsLimit = 100
 )
 
 var (
-	// ErrNoWork and ErrLockConflict are soft outcomes — normal-speed retry, no error log.
-	// They are exported so callers that invoke Execute() directly (e.g. tests, one-off tools)
-	// can distinguish them from real failures.
 	ErrNoWork       = errors.New("no work available")
-	ErrLockConflict = errors.New("lock owned by another worker")
+	ErrLockConflict = errors.New("user lock owned by another worker")
 
-	// errFatalCycle wraps panics. Triggers a longer backoff to avoid thrashing after
-	// an unexpected runtime failure. Kept unexported — it is an internal loop concern.
 	errFatalCycle = errors.New("fatal cycle")
 )
 
-// WorkerMetrics holds lightweight in-memory counters for the balance worker.
-// All fields are safe for concurrent access via atomic operations.
 type WorkerMetrics struct {
 	TotalCycles    atomic.Int64
 	SuccessCycles  atomic.Int64
-	FailedCycles   atomic.Int64 // hard failures only (not no-work or conflict)
+	FailedCycles   atomic.Int64
 	NoWorkCycles   atomic.Int64
 	ConflictCycles atomic.Int64
-	LastDurationMs atomic.Int64 // wall-clock duration of the most recent cycle
+	LastDurationMs atomic.Int64
 }
 
 func (m *WorkerMetrics) String() string {
@@ -56,8 +54,6 @@ func (m *WorkerMetrics) String() string {
 	)
 }
 
-// RunBalanceWorker starts a background goroutine that continuously executes the balance worker.
-// It returns a *WorkerMetrics pointer that is safe to read concurrently at any time.
 func RunBalanceWorker(ctx context.Context, db *gorm.DB) *WorkerMetrics {
 	m := &WorkerMetrics{}
 
@@ -71,8 +67,6 @@ func RunBalanceWorker(ctx context.Context, db *gorm.DB) *WorkerMetrics {
 			case <-ctx.Done():
 				return
 			case <-timer.C:
-				// Reset is called only here, right after reading from timer.C,
-				// so the channel is always drained — no stale-tick drain needed.
 				start := time.Now()
 				err := executeBalanceCycle(ctx, db, lockUuid)
 				m.LastDurationMs.Store(time.Since(start).Milliseconds())
@@ -115,74 +109,77 @@ func executeBalanceCycle(ctx context.Context, db *gorm.DB, lockUuid uuid.UUID) (
 		}
 	}()
 
-	tx := db.Begin()
-	if tx.Error != nil {
-		log.Errorf(ctx, tx.Error, "cannot begin balance worker transaction lockUuid=%s", lockUuid)
-		return tx.Error
-	}
-
-	execErr := NewBalanceWorker(tx, lockUuid).Execute()
-	if execErr != nil && !errors.Is(execErr, ErrNoWork) && !errors.Is(execErr, ErrLockConflict) {
-		tx.Rollback()
-		log.Errorf(ctx, execErr, "cannot execute balance worker lockUuid=%s", lockUuid)
-		return execErr
-	}
-
-	// ErrNoWork and ErrLockConflict are soft outcomes: commit to preserve any lock
-	// updates made by LockNewTransactions before returning without an error delay.
-	if err = tx.Commit().Error; err != nil {
-		tx.Rollback()
-		log.Errorf(ctx, err, "cannot commit balance worker transaction lockUuid=%s", lockUuid)
-		return err
-	}
-
-	return nil
+	worker := NewBalanceWorker(db, lockUuid)
+	return worker.Execute(ctx)
 }
 
-type Locker interface {
-	LockNewTransactions(lockUuid uuid.UUID) error
+type UserLocker interface {
+	TryLockUser(ctx context.Context, userID int64, lockUUID uuid.UUID, ttl time.Duration) (bool, error)
+	UnlockUser(ctx context.Context, userID int64, lockUUID uuid.UUID) error
 }
 
-type Provider interface {
-	GetLockedTransactions() ([]entities.Transaction, error)
+type UserProvider interface {
+	GetUsersWithNewTransactions(ctx context.Context, limit int) ([]int64, error)
+	GetUserTransactions(ctx context.Context, userID int64, limit int) ([]entities.Transaction, error)
 }
 
 type Processor interface {
-	Execute(*entities.Transaction) error
+	Execute(ctx context.Context, transaction *entities.Transaction) error
 }
 
-// BalanceWorker is responsible for monitoring new correction requests, initiating correction processing,
-// tracking new transactions, and initiating their processing.
 type BalanceWorker struct {
-	LockUuid  uuid.UUID
-	Locker    Locker
-	Provider  Provider
-	Processor Processor
+	LockUuid     uuid.UUID
+	UserLocker   UserLocker
+	UserProvider UserProvider
+	Processor    Processor
 }
 
-// Execute retrieves and processes the current correction if available,
-// then retrieves and processes the next transaction.
-func (b BalanceWorker) Execute() error {
-	err := b.Locker.LockNewTransactions(b.LockUuid)
+func (b BalanceWorker) Execute(ctx context.Context) error {
+	userIDs, err := b.UserProvider.GetUsersWithNewTransactions(ctx, usersBatchSize)
 	if err != nil {
 		return err
 	}
 
-	transactions, err := b.Provider.GetLockedTransactions()
-	if err != nil {
-		return err
-	}
-
-	if len(transactions) == 0 {
+	if len(userIDs) == 0 {
 		return ErrNoWork
 	}
 
-	for _, transaction := range transactions {
-		if *transaction.LockUuid != b.LockUuid {
-			return ErrLockConflict
+	for _, userID := range userIDs {
+		ok, err := b.UserLocker.TryLockUser(ctx, userID, b.LockUuid, userLockTTL)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			continue
 		}
 
-		if err = b.Processor.Execute(&transaction); err != nil {
+		// IMPORTANT: process user in transaction
+		err = b.processUser(ctx, userID)
+		if err != nil {
+			return err
+		}
+
+		// optional unlock (TTL fallback exists anyway)
+		_ = b.UserLocker.UnlockUser(ctx, userID, b.LockUuid)
+
+		return nil // process only one user per cycle (important for fairness)
+	}
+
+	return ErrLockConflict
+}
+
+func (b BalanceWorker) processUser(ctx context.Context, userID int64) error {
+	txList, err := b.UserProvider.GetUserTransactions(ctx, userID, transactionsLimit)
+	if err != nil {
+		return err
+	}
+
+	if len(txList) == 0 {
+		return nil
+	}
+
+	for _, t := range txList {
+		if err := b.Processor.Execute(ctx, &t); err != nil {
 			return err
 		}
 	}
@@ -190,14 +187,14 @@ func (b BalanceWorker) Execute() error {
 	return nil
 }
 
-// NewBalanceWorker returns BalanceWorker instance.
 func NewBalanceWorker(db *gorm.DB, lockUuid uuid.UUID) BalanceWorker {
 	transactionRepository := repositories.NewTransactionRepository(db)
+	userLockRepository := repositories.NewUserLockRepository(db)
 
 	return BalanceWorker{
-		LockUuid:  lockUuid,
-		Locker:    transactionRepository,
-		Provider:  transactionRepository,
-		Processor: services.NewTransactionProcessor(db),
+		LockUuid:     lockUuid,
+		UserLocker:   userLockRepository,
+		UserProvider: transactionRepository,
+		Processor:    services.NewTransactionProcessor(db),
 	}
 }

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/vo"
@@ -11,7 +12,7 @@ import (
 
 // BalanceCalculator actual balance calculator
 type BalanceCalculator interface {
-	CalculateBalance() (int64, error)
+	CalculateBalance(ctx context.Context) (int64, error)
 }
 
 type BalanceProvider struct {
@@ -19,8 +20,8 @@ type BalanceProvider struct {
 	calculator BalanceCalculator
 }
 
-func (b BalanceProvider) Provide(userId uint64) (*entities.Balance, error) {
-	balance, err := b.repo.Get(userId)
+func (b BalanceProvider) Provide(ctx context.Context, userId uint64) (*entities.Balance, error) {
+	balance, err := b.repo.Get(ctx, userId)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot provide balance")
 	}
@@ -29,13 +30,13 @@ func (b BalanceProvider) Provide(userId uint64) (*entities.Balance, error) {
 		return balance, nil
 	}
 
-	calculatedValue, err := b.calculator.CalculateBalance()
+	calculatedValue, err := b.calculator.CalculateBalance(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot provide balance")
 	}
 
 	balance = entities.NewBalance(vo.NewTotalAmount(calculatedValue), userId)
-	err = b.repo.Save(balance)
+	err = b.repo.Save(ctx, balance)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot provide balance")
 	}

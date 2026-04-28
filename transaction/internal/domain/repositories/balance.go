@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"errors"
 	"wallet/transaction/internal/domain/entities"
 
@@ -13,15 +14,15 @@ type BalanceRepository struct {
 }
 
 // Save saves the balance entity to the database and returns any encountered error.
-func (repo BalanceRepository) Save(balance *entities.Balance) error {
-	return repo.db.Save(balance).Error
+func (repo BalanceRepository) Save(ctx context.Context, balance *entities.Balance) error {
+	return repo.db.WithContext(ctx).Save(balance).Error
 }
 
 // Get retrieves a balance entity from the database by its ID.
-func (repo BalanceRepository) Get(userId uint64) (*entities.Balance, error) {
+func (repo BalanceRepository) Get(ctx context.Context, userId uint64) (*entities.Balance, error) {
 	var balance entities.Balance
 
-	if err := repo.db.Where("user_id = ?", userId).Limit(1).First(&balance).Error; err != nil {
+	if err := repo.db.WithContext(ctx).Where("user_id = ?", userId).Limit(1).First(&balance).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}

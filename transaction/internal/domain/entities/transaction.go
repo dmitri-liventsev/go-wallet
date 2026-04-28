@@ -42,11 +42,11 @@ const Locked = "locked"
 // Transaction represents the Transaction entity, which stores all incoming requests for changing the user's balance.
 type Transaction struct {
 	ID         string     `gorm:"type:varchar(128);primaryKey"`
-	Status     string     `gorm:"type:varchar(10);check:status IN ('new','done','cancelled', 'locked');index"`
 	SourceType string     `gorm:"type:varchar(10);check:source_type IN ('game','server','payment', 'internal')"`
 	Action     string     `gorm:"type:varchar(10);check:action IN ('win','lose')"`
 	Amount     vo.Amount  `gorm:"type:integer"`
-	UserID     uint64     `gorm:"type:integer"`
+	UserID     uint64     `gorm:"type:integer;index"`
+	Status     string     `gorm:"type:varchar(10);index;check:status IN ('new','done','cancelled', 'locked');index"`
 	LockUuid   *uuid.UUID `gorm:"type:uuid;default:null"`
 	LockedAt   *time.Time `gorm:"type:timestamptz;default:null"`
 	CreatedAt  time.Time  `gorm:"type:timestamptz;default:current_timestamp;index"`

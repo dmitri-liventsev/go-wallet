@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
@@ -17,13 +18,13 @@ type TransactionProcessor struct {
 
 // Execute processes the given transaction by updating the balance and marking the transaction as done
 // or cancelled based on the outcome. Internal transactions ignoring negative balance validation
-func (t TransactionProcessor) Execute(transaction *entities.Transaction) error {
+func (t TransactionProcessor) Execute(ctx context.Context, transaction *entities.Transaction) error {
 	var err error
 
 	if transaction.IsInternal() {
-		err = t.BalanceService.ForceUpdateBalance(transaction.Amount, transaction.UserID)
+		err = t.BalanceService.ForceUpdateBalance(ctx, transaction.Amount, transaction.UserID)
 	} else {
-		err = t.BalanceService.UpdateBalance(transaction.Amount, transaction.UserID)
+		err = t.BalanceService.UpdateBalance(ctx, transaction.Amount, transaction.UserID)
 	}
 
 	if err != nil && errors.Is(err, ErrNegativeBalance) {
@@ -34,7 +35,7 @@ func (t TransactionProcessor) Execute(transaction *entities.Transaction) error {
 		transaction.MarkAsDone()
 	}
 
-	err = t.TxRepo.Save(transaction)
+	err = t.TxRepo.Save(ctx, transaction)
 	if err != nil {
 		return err
 	}

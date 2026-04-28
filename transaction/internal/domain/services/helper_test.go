@@ -1,6 +1,7 @@
 package services_test
 
 import (
+	"context"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
 	"wallet/transaction/internal/domain/vo"
@@ -10,22 +11,22 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func createTransaction(amount int) *entities.Transaction {
+func createTransaction(ctx context.Context, amount int) *entities.Transaction {
 	GinkgoHelper()
-	return createTransactionWithStatus(amount, entities.New)
+	return createTransactionWithStatus(ctx, amount, entities.New)
 }
 
-func createCancelledTransaction(amount int) *entities.Transaction {
+func createCancelledTransaction(ctx context.Context, amount int) *entities.Transaction {
 	GinkgoHelper()
-	return createTransactionWithStatus(amount, entities.Cancelled)
+	return createTransactionWithStatus(ctx, amount, entities.Cancelled)
 }
 
-func createDoneTransaction(amount int) *entities.Transaction {
+func createDoneTransaction(ctx context.Context, amount int) *entities.Transaction {
 	GinkgoHelper()
-	return createTransactionWithStatus(amount, entities.Done)
+	return createTransactionWithStatus(ctx, amount, entities.Done)
 }
 
-func createTransactionWithStatus(amount int, status string) *entities.Transaction {
+func createTransactionWithStatus(ctx context.Context, amount int, status string) *entities.Transaction {
 	GinkgoHelper()
 
 	action := entities.Win
@@ -37,7 +38,7 @@ func createTransactionWithStatus(amount int, status string) *entities.Transactio
 	transaction := entities.NewTransaction(uuid.New().String(), vo.NewAmount(amount), action, entities.Game, 1)
 	transaction.Status = status
 
-	err := transactionRepo.Save(transaction)
+	err := transactionRepo.Save(ctx, transaction)
 	Expect(err).ToNot(HaveOccurred())
 
 	return transaction

@@ -20,7 +20,7 @@ type txController struct {
 
 func (t txController) GetBalance(ctx context.Context, payload *txsvc.GetBalancePayload) (*txsvc.GetBalanceResult, error) {
 	userID := payload.UserID
-	balance, err := t.balanceRepo.Get(userID)
+	balance, err := t.balanceRepo.Get(ctx, userID)
 
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (t txController) CreateTransaction(ctx context.Context, payload *txsvc.Crea
 		ID:         payload.TransactionID,
 	}
 
-	return command.Execute(t.txRepo)
+	return command.Execute(ctx, t.txRepo)
 }
 
 func (t txController) Healthcheck(ctx context.Context) (*balancesvc.HealthcheckResult, error) {

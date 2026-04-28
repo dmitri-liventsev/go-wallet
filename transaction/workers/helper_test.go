@@ -1,6 +1,7 @@
 package workers_test
 
 import (
+	"context"
 	"time"
 	"wallet/transaction/internal/domain/entities"
 	"wallet/transaction/internal/domain/repositories"
@@ -11,30 +12,30 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func createTransaction(amount int) *entities.Transaction {
+func createTransaction(ctx context.Context) *entities.Transaction {
 	GinkgoHelper()
-	return createTransactionWithStatus(amount, entities.New)
+	return createTransactionWithStatus(ctx, 10, entities.New)
 }
 
-func createDoneTransaction(amount int) *entities.Transaction {
+func createDoneTransaction(ctx context.Context) *entities.Transaction {
 	GinkgoHelper()
-	return createTransactionWithStatus(amount, entities.Done)
+	return createTransactionWithStatus(ctx, 10, entities.Done)
 }
 
-func createLockedTransaction(lockId *uuid.UUID) *entities.Transaction {
+func createLockedTransaction(ctx context.Context, lockId *uuid.UUID) *entities.Transaction {
 	GinkgoHelper()
-	transaction := createTransactionWithStatus(10, entities.Locked)
+	transaction := createTransactionWithStatus(ctx, 10, entities.Locked)
 	transaction.LockUuid = lockId
 	now := time.Now()
 	transaction.LockedAt = &now
 
-	err := repositories.NewTransactionRepository(DB).Save(transaction)
+	err := repositories.NewTransactionRepository(DB).Save(ctx, transaction)
 	Expect(err).ToNot(HaveOccurred())
 
 	return transaction
 }
 
-func createTransactionWithStatus(amount int, status string) *entities.Transaction {
+func createTransactionWithStatus(ctx context.Context, amount int, status string) *entities.Transaction {
 	GinkgoHelper()
 
 	action := entities.Win
@@ -47,7 +48,7 @@ func createTransactionWithStatus(amount int, status string) *entities.Transactio
 	transaction := entities.NewTransaction(uuid.New().String(), vo.NewAmount(amount), action, entities.Game, 1)
 	transaction.Status = status
 
-	err := transactionRepo.Save(transaction)
+	err := transactionRepo.Save(ctx, transaction)
 	Expect(err).ToNot(HaveOccurred())
 
 	return transaction

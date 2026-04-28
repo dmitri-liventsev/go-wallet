@@ -33,8 +33,8 @@ var _ = Describe("transaction management", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should ignore the transaction", func() {
-				transaction, err := repo.GetNextTransaction()
+			It("should ignore the transaction", func(ctx context.Context) {
+				transaction, err := repo.GetNextTransaction(ctx)
 
 				Expect(transaction).To(BeNil())
 				Expect(err).NotTo(HaveOccurred())
@@ -48,8 +48,8 @@ var _ = Describe("transaction management", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should save transaction data correctly", func() {
-				transaction, err := repo.GetNextTransaction()
+			It("should save transaction data correctly", func(ctx context.Context) {
+				transaction, err := repo.GetNextTransaction(ctx)
 
 				Expect(transaction).ToNot(BeNil())
 				Expect(err).NotTo(HaveOccurred())
@@ -84,8 +84,8 @@ var _ = Describe("transaction management", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should save transaction data correctly", func() {
-				transaction, err := repo.GetNextTransaction()
+			It("should save transaction data correctly", func(ctx context.Context) {
+				transaction, err := repo.GetNextTransaction(ctx)
 
 				Expect(transaction).ToNot(BeNil())
 				Expect(err).NotTo(HaveOccurred())
@@ -115,7 +115,7 @@ var _ = Describe("transaction management", func() {
 
 	Context("a transaction are exists", func() {
 		var existedTransaction *entities.Transaction
-		BeforeEach(func() {
+		BeforeEach(func(ctx context.Context) {
 			payload = &wallet.CreateTransactionPayload{
 				State:         entities.Win,
 				Amount:        "10.01",
@@ -127,7 +127,7 @@ var _ = Describe("transaction management", func() {
 			repo = repositories.NewTransactionRepository(DB)
 
 			existedTransaction = entities.NewTransaction(uuid.New().String(), vo.NewAmount(10), entities.Win, entities.Game, 1)
-			err := repo.Save(existedTransaction)
+			err := repo.Save(ctx, existedTransaction)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -138,8 +138,8 @@ var _ = Describe("transaction management", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should only save the first transaction and ignore subsequent ones", func() {
-				transactions, err := repo.GetAllTransactions()
+			It("should only save the first transaction and ignore subsequent ones", func(ctx context.Context) {
+				transactions, err := repo.GetAllTransactions(ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(transactions)).To(Equal(1))
 			})
@@ -148,7 +148,7 @@ var _ = Describe("transaction management", func() {
 
 	Context("a cancelled transaction exists", func() {
 		var existedTransaction *entities.Transaction
-		BeforeEach(func() {
+		BeforeEach(func(ctx context.Context) {
 			payload = &wallet.CreateTransactionPayload{
 				State:         entities.Win,
 				Amount:        "10.01",
@@ -161,7 +161,7 @@ var _ = Describe("transaction management", func() {
 
 			existedTransaction = entities.NewTransaction(uuid.New().String(), vo.NewAmount(10), entities.Win, entities.Game, 1)
 			existedTransaction.MarkAsCancelled()
-			err := repo.Save(existedTransaction)
+			err := repo.Save(ctx, existedTransaction)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -172,8 +172,8 @@ var _ = Describe("transaction management", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should ignore the new transaction", func() {
-				transactions, err := repo.GetAllTransactions()
+			It("should ignore the new transaction", func(ctx context.Context) {
+				transactions, err := repo.GetAllTransactions(ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(transactions)).To(Equal(1))
 			})

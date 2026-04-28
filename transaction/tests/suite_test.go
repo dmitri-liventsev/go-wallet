@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gorm.io/gorm"
+	"net"
 	"testing"
 	"wallet/config"
 	"wallet/gen/wallet"
@@ -40,6 +41,15 @@ func connectToTestDB(ctx context.Context) *gorm.DB {
 	if err != nil {
 		panic("failed to switch schema: " + err.Error())
 	}
+
+	Eventually(func() error {
+		conn, err := net.Dial("tcp", "0.0.0.0:8080")
+		if err != nil {
+			return err
+		}
+		conn.Close()
+		return nil
+	}, "5s", "10ms").Should(Succeed())
 
 	DeferCleanup(func() {
 		sqlDB, _ := gormdb.DB()

@@ -62,11 +62,11 @@ var _ = Describe("transaction management", func() {
 			})
 		})
 
-		When("a signal to create a lost transaction with positive amount is received", func() {
+		When("a signal to create a lose transaction with positive amount is received", func() {
 			var err error
 			BeforeEach(func(ctx context.Context) {
 				payload.Amount = "10.01"
-				payload.State = "lost"
+				payload.State = entities.Lost
 				err = client.CreateTransaction(ctx, payload)
 
 			})
@@ -79,7 +79,7 @@ var _ = Describe("transaction management", func() {
 		When("a signal to create a transaction with negative amount is received", func() {
 			BeforeEach(func(ctx context.Context) {
 				payload.Amount = "-10.01"
-				payload.State = "lost"
+				payload.State = entities.Lost
 				err := client.CreateTransaction(ctx, payload)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -102,7 +102,7 @@ var _ = Describe("transaction management", func() {
 			var err error
 			BeforeEach(func(ctx context.Context) {
 				payload.Amount = "-10.01"
-				payload.State = "win"
+				payload.State = entities.Win
 				err = client.CreateTransaction(ctx, payload)
 
 			})

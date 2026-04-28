@@ -1,11 +1,12 @@
 package e2e_test
 
 import (
+	"wallet/transaction/internal/domain/entities"
+	"wallet/transaction/internal/domain/repositories"
+
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"wallet/transaction/internal/domain/entities"
-	"wallet/transaction/internal/domain/repositories"
 )
 
 var _ = Describe("transaction сreation", func() {
@@ -31,7 +32,7 @@ var _ = Describe("transaction сreation", func() {
 			})
 
 			It("correct http code should be returned", func() {
-				Expect(responseCode).To(Equal(202))
+				Expect(responseCode).To(Equal(200))
 			})
 		})
 	})

@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"time"
 	"wallet/gen/wallet"
@@ -47,6 +48,9 @@ var _ = Describe("transaction management", func() {
 					worker := workers.NewBalanceWorker(DB, uuid.New())
 					for i := 0; i < numOfTransactions; i++ {
 						err := worker.Execute()
+						if errors.Is(err, workers.ErrNoWork) {
+							break
+						}
 						Expect(err).NotTo(HaveOccurred())
 					}
 				})

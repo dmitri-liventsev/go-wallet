@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"net/http"
 	"wallet/transaction/internal/domain/entities"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 func createTx(txID string, amount float64, action string) int {
@@ -22,7 +23,7 @@ func createTx(txID string, amount float64, action string) int {
 	jsonPayload, err := json.Marshal(payload)
 	Expect(err).NotTo(HaveOccurred())
 
-	req, err := http.NewRequest("POST", "http://0.0.0.0:8081/transaction", bytes.NewBuffer(jsonPayload))
+	req, err := http.NewRequest("POST", "http://0.0.0.0:8081/user/1/transaction", bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return http.StatusInternalServerError
 	}

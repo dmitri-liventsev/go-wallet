@@ -49,8 +49,8 @@ func (t txController) CreateTransaction(ctx context.Context, payload *txsvc.Crea
 	if amount.LessThenZero() && payload.State == "win" {
 		return errors.New("win amount must be greater than zero")
 	}
-	if amount.GreaterThenZero() && payload.State == "lost" {
-		return errors.New("win amount must be greater than zero")
+	if amount.GreaterThenZero() && payload.State == "lose" {
+		return errors.New("lose amount must be less than or equal to zero")
 	}
 
 	command := transaction.AddTransaction{

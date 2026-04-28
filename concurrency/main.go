@@ -43,7 +43,7 @@ func worker(wg *sync.WaitGroup, jobs <-chan Job, results chan<- error) {
 		txID := uuid.New().String()
 
 		statusCode, err := createTx(txID, job.UserID, job.Amount, getRandomServer())
-		if statusCode != 202 {
+		if statusCode != 200 {
 			fmt.Println("Error creating transaction. Status code:"+strconv.Itoa(statusCode), err)
 		}
 
@@ -77,9 +77,9 @@ func main() {
 
 		if err == sql.ErrNoRows {
 			_, err = tx.Exec(`
-				INSERT INTO balances (id, user_id, value)
-				VALUES ($1, $2, $3)
-			`, uuid.New(), userId, initial)
+             INSERT INTO balances (id, user_id, value)
+             VALUES ($1, $2, $3)
+          `, uuid.New(), userId, initial)
 
 			if err != nil {
 				tx.Rollback()
@@ -116,9 +116,10 @@ func main() {
 		userId := users[rand.Intn(len(users))]
 
 		intNum := rand.Intn(2001) - 1000
-		amount := float64(intNum) / 100
+		floatNum := float64(intNum)
+		amount := floatNum / 100
 
-		expected[userId] += amount
+		expected[userId] += floatNum
 
 		jobs <- Job{
 			UserID: userId,
@@ -166,6 +167,7 @@ func createTx(txID string, userID uint64, amount float64, host string) (int, err
 	payload := map[string]string{
 		"state":         state,
 		"amount":        fmt.Sprintf("%.2f", amount),
+		"userID":        strconv.FormatUint(userID, 10),
 		"transactionId": txID,
 	}
 

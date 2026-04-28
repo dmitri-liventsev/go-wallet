@@ -13,7 +13,7 @@ import (
 const Win = "win"
 
 // Lost action.
-const Lost = "lost"
+const Lost = "lose"
 
 // Game source type.
 const Game = "game"

@@ -84,7 +84,13 @@ func RunAutoMigrations(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
+
 	err = db.AutoMigrate(&entities.Balance{})
+	if err != nil {
+		return err
+	}
+
+	err = db.AutoMigrate(&entities.UserLock{})
 	if err != nil {
 		return err
 	}

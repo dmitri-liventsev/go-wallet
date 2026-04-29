@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -15,9 +16,6 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
-
-const numOfTransactions = 1000
-const numWorkers = 20
 
 var users = []uint64{1, 2, 3}
 
@@ -86,6 +84,10 @@ func initUserBalance(db *sql.DB, userID uint64) int64 {
 }
 
 func main() {
+	numOfTransactions := flag.Int("numOfTransactions", 1000, "number of transactions to send")
+	numWorkers := flag.Int("numWorkers", 20, "number of concurrent workers")
+	flag.Parse()
+
 	rand.Seed(time.Now().UnixNano())
 
 	connStr := "user=postgres password=password dbname=txdb host=localhost port=5432 sslmode=disable"
@@ -107,17 +109,17 @@ func main() {
 	// -------------------------
 	// workers
 	// -------------------------
-	jobs := make(chan Job, numOfTransactions)
-	results := make(chan error, numOfTransactions)
+	jobs := make(chan Job, *numOfTransactions)
+	results := make(chan error, *numOfTransactions)
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < numWorkers; i++ {
+	for i := 0; i < *numWorkers; i++ {
 		wg.Add(1)
 		go worker(&wg, jobs, results)
 	}
 
-	for i := 0; i < numOfTransactions; i++ {
+	for i := 0; i < *numOfTransactions; i++ {
 		userId := users[rand.Intn(len(users))]
 
 		intNum := rand.Intn(2001) - 1000

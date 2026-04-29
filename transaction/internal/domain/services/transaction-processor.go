@@ -12,41 +12,37 @@ import (
 // TransactionProcessor handles the processing of transactions,
 // including repository operations and balance aggregation.
 type TransactionProcessor struct {
-	TxRepo         *repositories.TransactionRepository
-	BalanceService *Balance
+	db *gorm.DB
 }
 
-// Execute processes the given transaction by updating the balance and marking the transaction as done
-// or cancelled based on the outcome. Internal transactions ignoring negative balance validation
+// Execute processes the given transaction atomically:
+// the balance update and the transaction status save happen in a single DB transaction,
+// so a crash between the two steps cannot produce an inconsistent state.
 func (t TransactionProcessor) Execute(ctx context.Context, transaction *entities.Transaction) error {
-	var err error
+	return t.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		balanceService := &Balance{repo: repositories.NewBalanceRepository(tx)}
+		txRepo := repositories.NewTransactionRepository(tx)
 
-	if transaction.IsInternal() {
-		err = t.BalanceService.ForceUpdateBalance(ctx, transaction.Amount, transaction.UserID)
-	} else {
-		err = t.BalanceService.UpdateBalance(ctx, transaction.Amount, transaction.UserID)
-	}
+		var balanceErr error
+		if transaction.IsInternal() {
+			balanceErr = balanceService.ForceUpdateBalance(ctx, transaction.Amount, transaction.UserID)
+		} else {
+			balanceErr = balanceService.UpdateBalance(ctx, transaction.Amount, transaction.UserID)
+		}
 
-	if err != nil && errors.Is(err, ErrNegativeBalance) {
-		transaction.MarkAsCancelled()
-	} else if err != nil {
-		return err
-	} else {
-		transaction.MarkAsDone()
-	}
+		if balanceErr != nil && errors.Is(balanceErr, ErrNegativeBalance) {
+			transaction.MarkAsCancelled()
+		} else if balanceErr != nil {
+			return balanceErr
+		} else {
+			transaction.MarkAsDone()
+		}
 
-	err = t.TxRepo.Save(ctx, transaction)
-	if err != nil {
-		return err
-	}
-
-	return nil
+		return txRepo.Save(ctx, transaction)
+	})
 }
 
 // NewTransactionProcessor returns TransactionProcessor instance.
 func NewTransactionProcessor(db *gorm.DB) TransactionProcessor {
-	return TransactionProcessor{
-		TxRepo:         repositories.NewTransactionRepository(db),
-		BalanceService: NewBalanceService(db),
-	}
+	return TransactionProcessor{db: db}
 }

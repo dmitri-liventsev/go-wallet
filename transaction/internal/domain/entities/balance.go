@@ -9,7 +9,7 @@ import (
 // Balance represents the Balance entity, responsible for storing the current state of the balance.
 type Balance struct {
 	ID     uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	UserID uint64         `gorm:"type:integer"`
+	UserID uint64         `gorm:"type:integer;uniqueIndex"`
 	Value  vo.TotalAmount `gorm:"type:bigint;not null"`
 }
 

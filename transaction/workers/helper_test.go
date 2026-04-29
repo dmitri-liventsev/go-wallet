@@ -12,6 +12,24 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func createUserLock(ctx context.Context, userID int64, lockID uuid.UUID, ttl time.Duration) {
+	GinkgoHelper()
+	expiresAt := time.Now().Add(ttl)
+	lock := entities.UserLock{
+		UserId:    userID,
+		LockUuid:  &lockID,
+		ExpiresAt: expiresAt,
+		UpdatedAt: time.Now(),
+	}
+	err := DB.WithContext(ctx).Save(&lock).Error
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func createTransactionWithAmount(ctx context.Context, cents int) *entities.Transaction {
+	GinkgoHelper()
+	return createTransactionWithStatus(ctx, cents, entities.New)
+}
+
 func createTransaction(ctx context.Context) *entities.Transaction {
 	GinkgoHelper()
 	return createTransactionWithStatus(ctx, 10, entities.New)
@@ -41,7 +59,6 @@ func createTransactionWithStatus(ctx context.Context, amount int, status string)
 	action := entities.Win
 	if amount < 0 {
 		action = entities.Lost
-		amount *= -1
 	}
 
 	transactionRepo := repositories.NewTransactionRepository(DB)

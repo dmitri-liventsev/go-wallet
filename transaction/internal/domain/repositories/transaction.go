@@ -192,13 +192,13 @@ func (repo TransactionRepository) GetUsersWithNewTransactions(ctx context.Contex
 	return userIds, nil
 }
 
-// GetUserTransactions returns transactions for a specific user ordered by creation date DESC
+// GetUserTransactions returns unprocessed transactions for a specific user ordered by creation date ASC
 func (repo TransactionRepository) GetUserTransactions(ctx context.Context, userID int64, limit int) ([]entities.Transaction, error) {
 	var transactions []entities.Transaction
 
 	err := repo.db.WithContext(ctx).
-		Where("user_id = ?", userID).
-		Order("created_at DESC").
+		Where("user_id = ? AND status = ?", userID, entities.New).
+		Order("created_at ASC").
 		Limit(limit).
 		Find(&transactions).Error
 

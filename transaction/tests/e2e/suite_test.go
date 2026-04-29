@@ -2,10 +2,6 @@ package e2e_test
 
 import (
 	"context"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"goa.design/clue/log"
-	"gorm.io/gorm"
 	"net"
 	"net/url"
 	"sync"
@@ -15,6 +11,11 @@ import (
 	"wallet/transaction/interfaces"
 	"wallet/transaction/interfaces/http"
 	"wallet/transaction/internal/infrastructure/db"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"goa.design/clue/log"
+	"gorm.io/gorm"
 )
 
 var addr = "http://0.0.0.0:8081/transaction"
@@ -56,9 +57,11 @@ func runServer() {
 
 	http.HandleHTTPServer(ctx, u, txEndpoints, &wg, errc, false)
 
+	host := u.Host
 	Eventually(func() error {
-		conn, err := net.Dial("tcp", "0.0.0.0:8080")
+		conn, err := net.Dial("tcp", host)
 		if err != nil {
+			GinkgoWriter.Printf("waiting for server on %s: %v\n", host, err)
 			return err
 		}
 		conn.Close()

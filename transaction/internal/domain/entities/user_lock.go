@@ -7,7 +7,7 @@ import (
 )
 
 type UserLock struct {
-	UserId    int64      `gorm:"primary_key;column:user_id"`
+	UserId    int64      `gorm:"primaryKey;uniqueIndex;column:user_id;autoIncrement:false"`
 	LockUuid  *uuid.UUID `gorm:"type:uuid;default:null;column:lock_uuid"`
 	ExpiresAt time.Time  `gorm:"type:timestamp;default:null"`
 	UpdatedAt time.Time  `gorm:"type:timestamp;default:null"`

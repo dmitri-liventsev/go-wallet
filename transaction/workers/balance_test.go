@@ -109,17 +109,12 @@ var _ = Describe("balance worker processing", func() {
 		})
 	})
 
-	Context("transaction was locked by same process before", func() {
-		var (
-			lockUuid uuid.UUID
-		)
-
+	Context("user has a new transaction pending processing", func() {
 		BeforeEach(func(ctx context.Context) {
-			lockUuid = uuid.New()
-			_ = createLockedTransaction(ctx, &lockUuid)
+			_ = createTransaction(ctx)
 		})
 
-		When("the worker starts", func() {
+		When("the worker starts with any lock uuid", func() {
 			var (
 				balanceWorker   workers.BalanceWorker
 				startBalance    vo.TotalAmount
@@ -132,7 +127,7 @@ var _ = Describe("balance worker processing", func() {
 				Expect(err).ToNot(HaveOccurred())
 				startBalance = balance.Value
 
-				balanceWorker = workers.NewBalanceWorker(DB, lockUuid)
+				balanceWorker = workers.NewBalanceWorker(DB, uuid.New())
 
 				err = balanceWorker.Execute(ctx)
 				Expect(err).ToNot(HaveOccurred())
@@ -146,20 +141,17 @@ var _ = Describe("balance worker processing", func() {
 		})
 	})
 
-	Context("three transaction are locked, transaction in the middle are locked by another process", func() {
+	Context("user has multiple new transactions pending processing", func() {
 		var (
-			lockUuid     uuid.UUID
 			transaction1 *entities.Transaction
 			transaction2 *entities.Transaction
 			transaction3 *entities.Transaction
 		)
 
 		BeforeEach(func(ctx context.Context) {
-			lockUuid = uuid.New()
-			transaction1 = createLockedTransaction(ctx, &lockUuid)
-			randomUuid := uuid.New()
-			transaction2 = createLockedTransaction(ctx, &randomUuid)
-			transaction3 = createLockedTransaction(ctx, &lockUuid)
+			transaction1 = createTransaction(ctx)
+			transaction2 = createTransaction(ctx)
+			transaction3 = createTransaction(ctx)
 		})
 
 		When("the worker starts", func() {
@@ -169,15 +161,14 @@ var _ = Describe("balance worker processing", func() {
 			)
 
 			BeforeEach(func(ctx context.Context) {
-				balanceWorker = workers.NewBalanceWorker(DB, lockUuid)
-
+				balanceWorker = workers.NewBalanceWorker(DB, uuid.New())
 				transactionRepository = repositories.NewTransactionRepository(DB)
 
 				err := balanceWorker.Execute(ctx)
-				Expect(err).To(Or(BeNil(), MatchError(workers.ErrNoWork), MatchError(workers.ErrLockConflict)))
+				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("only first transaction should be processed", func(ctx context.Context) {
+			It("all transactions should be processed", func(ctx context.Context) {
 				var err error
 				transaction1, err = transactionRepository.FindByID(ctx, transaction1.ID)
 				Expect(err).ToNot(HaveOccurred())
@@ -187,8 +178,8 @@ var _ = Describe("balance worker processing", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(transaction1.Status).To(Equal(entities.Done))
-				Expect(transaction2.Status).To(Equal(entities.Locked))
-				Expect(transaction3.Status).To(Equal(entities.Locked))
+				Expect(transaction2.Status).To(Equal(entities.Done))
+				Expect(transaction3.Status).To(Equal(entities.Done))
 			})
 		})
 	})

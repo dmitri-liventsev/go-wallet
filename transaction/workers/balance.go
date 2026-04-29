@@ -178,10 +178,17 @@ func (b BalanceWorker) processUser(ctx context.Context, userID int64) error {
 		return nil
 	}
 
+	log.Printf(ctx, "balance worker processing userID=%d txCount=%d lockUuid=%s", userID, len(txList), b.LockUuid)
+
 	for _, t := range txList {
+		log.Printf(ctx, "balance worker executing tx id=%s amount=%d action=%s status=%s userID=%d", t.ID, t.Amount.Cents, t.Action, t.Status, t.UserID)
+
 		if err := b.Processor.Execute(ctx, &t); err != nil {
+			log.Printf(ctx, "balance worker tx failed id=%s err=%v", t.ID, err)
 			return err
 		}
+
+		log.Printf(ctx, "balance worker tx done id=%s finalStatus=%s", t.ID, t.Status)
 	}
 
 	return nil

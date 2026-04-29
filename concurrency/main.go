@@ -51,6 +51,40 @@ func worker(wg *sync.WaitGroup, jobs <-chan Job, results chan<- error) {
 	}
 }
 
+// initUserBalance ensures a balance row exists for the user.
+// Returns the current balance value: the existing one if found, or the newly inserted initial value.
+func initUserBalance(db *sql.DB, userID uint64) int64 {
+	const startingBalance = int64(100000)
+
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatalf("tx begin error: %v", err)
+	}
+
+	var current int64
+	err = tx.QueryRow("SELECT value FROM balances WHERE user_id = $1", userID).Scan(&current)
+	if err == sql.ErrNoRows {
+		current = startingBalance
+		_, err = tx.Exec(
+			"INSERT INTO balances (id, user_id, value) VALUES ($1, $2, $3)",
+			uuid.New(), userID, current,
+		)
+		if err != nil {
+			tx.Rollback()
+			log.Fatalf("insert balance error: %v", err)
+		}
+	} else if err != nil {
+		tx.Rollback()
+		log.Fatalf("select balance error: %v", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Fatalf("tx commit error: %v", err)
+	}
+
+	return current
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
@@ -64,30 +98,10 @@ func main() {
 	// -------------------------
 	// init balances for 3 users
 	// -------------------------
-	initial := int64(100000)
-
-	for _, userId := range users {
-		tx, err := db.Begin()
-		if err != nil {
-			log.Fatalf("tx begin error: %v", err)
-		}
-
-		var existing int64
-		err = tx.QueryRow("SELECT value FROM balances WHERE user_id = $1", userId).Scan(&existing)
-
-		if err == sql.ErrNoRows {
-			_, err = tx.Exec(`
-             INSERT INTO balances (id, user_id, value)
-             VALUES ($1, $2, $3)
-          `, uuid.New(), userId, initial)
-
-			if err != nil {
-				tx.Rollback()
-				log.Fatalf("insert balance error: %v", err)
-			}
-		}
-
-		tx.Commit()
+	expected := make(map[uint64]float64, len(users))
+	for _, userID := range users {
+		initial := initUserBalance(db, userID)
+		expected[userID] = float64(initial)
 	}
 
 	// -------------------------
@@ -101,15 +115,6 @@ func main() {
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
 		go worker(&wg, jobs, results)
-	}
-
-	// -------------------------
-	// generate load
-	// -------------------------
-	expected := map[uint64]float64{
-		1: 100000,
-		2: 100000,
-		3: 100000,
 	}
 
 	for i := 0; i < numOfTransactions; i++ {

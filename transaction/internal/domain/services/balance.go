@@ -14,49 +14,42 @@ import (
 type BalanceRepository interface {
 	Save(ctx context.Context, balance *entities.Balance) error
 	Get(ctx context.Context, userId uint64) (*entities.Balance, error)
+	AtomicAdd(ctx context.Context, userID uint64, cents int64) error
+	AtomicAddIfNonNegative(ctx context.Context, userID uint64, cents int64) (bool, error)
 }
 
 // Balance service
 type Balance struct {
-	repo            BalanceRepository
-	balanceProvider BalanceProvider
+	repo BalanceRepository
 }
 
 // ErrNegativeBalance error.
 var ErrNegativeBalance = errors.New("TotalAmount cannot be negative")
 
-// UpdateBalance updates the current balance by adding the specified amount,
-// returns an error if the balance becomes negative or if any operation fails.
+// UpdateBalance atomically adds amount to the user's balance.
+// Returns ErrNegativeBalance if the result would be negative (lose exceeds balance).
 func (b *Balance) UpdateBalance(ctx context.Context, amount vo.Amount, userId uint64) error {
-	balance, err := b.balanceProvider.Provide(ctx, userId)
+	ok, err := b.repo.AtomicAddIfNonNegative(ctx, userId, int64(amount.Cents))
 	if err != nil {
 		return errors.Wrap(err, "cannot update balance")
 	}
-
-	balance.Value = balance.Value.AddAmount(amount)
-	if balance.Value.LessThanZero() && amount.LessThenZero() {
+	if !ok {
 		return ErrNegativeBalance
 	}
-
-	return b.repo.Save(ctx, balance)
+	return nil
 }
 
-// ForceUpdateBalance updates the current balance by adding the specified amount
-// and saves the updated balance without checking for negative values.
+// ForceUpdateBalance atomically adds amount without checking for negative balance.
 func (b *Balance) ForceUpdateBalance(ctx context.Context, amount vo.Amount, userId uint64) error {
-	balance, err := b.balanceProvider.Provide(ctx, userId)
-	if err != nil {
+	if err := b.repo.AtomicAdd(ctx, userId, int64(amount.Cents)); err != nil {
 		return errors.Wrap(err, "cannot update balance")
 	}
-	balance.Value = balance.Value.AddAmount(amount)
-
-	return b.repo.Save(ctx, balance)
+	return nil
 }
 
 // NewBalanceService returns an instance of Balance service.
 func NewBalanceService(db *gorm.DB) *Balance {
 	return &Balance{
-		repo:            repositories.NewBalanceRepository(db),
-		balanceProvider: NewBalanceProvider(db),
+		repo: repositories.NewBalanceRepository(db),
 	}
 }

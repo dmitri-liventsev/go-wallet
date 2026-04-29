@@ -8,30 +8,12 @@ This project provides a service for managing user balances, allowing users to re
 - Retrieve current balance
 - Manage balance information
 
-## Manual Testing Instructions
-
-When performing manual testing of the application, please keep in mind the following:
-
-- The record in the `balances` table must be unique and must have the ID `0f31adad-bfb6-41d1-aeff-c110ca13cbfa`. Any other records will be ignored.
-- The record in the `corrections` table must also be unique and must have the ID `3d8e7990-7a74-4613-9ed4-154dbba1d3b5`. Any other records will be ignored.
-
-### Lost transaction example
-```bash
-curl -X POST http://localhost:8081/transaction \
-     -H "Content-Type: application/json" \
-     -H "Source-Type: game" \
-     -d '{
-           "state": "lost",
-           "amount": "-50.00",
-           "transactionId": "your-transaction-id"
-         }'
-
-```
+## Manual Testing
 
 ### Win transaction example
 
 ```bash
-curl -X POST http://localhost:8082/transaction \
+curl -X POST http://localhost:8081/user/1/transaction \
      -H "Content-Type: application/json" \
      -H "Source-Type: game" \
      -d '{
@@ -40,6 +22,21 @@ curl -X POST http://localhost:8082/transaction \
            "transactionId": "your-transaction-id"
          }'
 ```
+
+### Lose transaction example
+
+```bash
+curl -X POST http://localhost:8081/user/1/transaction \
+     -H "Content-Type: application/json" \
+     -H "Source-Type: game" \
+     -d '{
+           "state": "lose",
+           "amount": "50.00",
+           "transactionId": "your-transaction-id"
+         }'
+```
+
+> Amounts are always positive. For `lose` transactions the server deducts the amount from the user's balance.
 
 ## Prerequisites
 

@@ -6,7 +6,6 @@ import (
 	"time"
 	"wallet/transaction/internal/domain/entities"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
@@ -51,16 +50,6 @@ func (repo TransactionRepository) FindByID(ctx context.Context, id string) (*ent
 	return &tx, nil
 }
 
-// FindByIDs finds a transactions by list of IDs in the database and returns the correction entity.
-func (repo TransactionRepository) FindByIDs(ctx context.Context, ids []string) ([]entities.Transaction, error) {
-	var transactions []entities.Transaction
-	if err := repo.db.WithContext(ctx).Where("id IN ?", ids).Find(&transactions).Error; err != nil {
-		return nil, err
-	}
-
-	return transactions, nil
-}
-
 // GetNextTransaction Returns the most recent 'old' transaction for processing.
 func (repo TransactionRepository) GetNextTransaction(ctx context.Context) (*entities.Transaction, error) {
 	var transaction entities.Transaction
@@ -84,29 +73,6 @@ func (repo TransactionRepository) GetAllTransactions(ctx context.Context) ([]ent
 	return transactions, nil
 }
 
-// GetLastOddTransactions retrieves the most recent odd-numbered 'new' or 'done' transactions up to the specified limit.
-func (repo TransactionRepository) GetLastOddTransactions(ctx context.Context, limit int) ([]entities.Transaction, error) {
-	var transactions []entities.Transaction
-	err := repo.db.WithContext(ctx).
-		Table("transactions").
-		Where("status IN (?)", entities.Done).
-		Order("created_at DESC").
-		Limit(limit * 2).
-		Find(&transactions).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var result []entities.Transaction
-	for i, tx := range transactions {
-		if (i+1)%2 != 0 {
-			result = append(result, tx)
-		}
-	}
-
-	return result, nil
-}
-
 // CalculateBalance calculates the total balance from 'done' transactions.
 func (repo TransactionRepository) CalculateBalance(ctx context.Context) (int64, error) {
 	var totalAmount *int64
@@ -125,53 +91,6 @@ func (repo TransactionRepository) CalculateBalance(ctx context.Context) (int64, 
 	}
 
 	return *totalAmount, nil
-}
-
-// LockNewTransactions locks all new and frozen(transactions which have lockedAt time more than 1 min ago) transactions
-func (repo TransactionRepository) LockNewTransactions(ctx context.Context, lockUuid uuid.UUID) error {
-	now := time.Now()
-	threshold := now.Add(-1 * time.Minute)
-
-	result := repo.db.WithContext(ctx).Model(&entities.Transaction{}).
-		Where("(status = ?) OR (locked_at < ? AND status = ?)", "new", threshold, "locked").
-		Updates(map[string]interface{}{
-			"status":    "locked",
-			"lock_uuid": lockUuid,
-			"locked_at": now,
-		})
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	return nil
-}
-
-// GetLockedTransactions returns all processing transactions ordered by created at ASC
-func (repo TransactionRepository) GetLockedTransactions(ctx context.Context) ([]entities.Transaction, error) {
-	var transactions []entities.Transaction
-
-	result := repo.db.WithContext(ctx).Where("status = ?", "locked").
-		Order("created_at ASC").
-		Find(&transactions)
-
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return transactions, nil
-}
-
-// FindAll returns all transactions
-func (repo TransactionRepository) FindAll(ctx context.Context) ([]entities.Transaction, error) {
-	var transactions []entities.Transaction
-
-	result := repo.db.WithContext(ctx).Find(&transactions)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return transactions, nil
 }
 
 // GetUsersWithNewTransactions returns distinct user IDs that have new transactions

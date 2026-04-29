@@ -11,16 +11,6 @@ type TotalAmount struct {
 	Cents int64
 }
 
-// AddAmount adds an Amount to the TotalAmount and returns the resulting TotalAmount.
-func (t *TotalAmount) AddAmount(amount Amount) TotalAmount {
-	return NewTotalAmount(t.Cents + int64(amount.Cents))
-}
-
-// LessThanZero returns true if the TotalAmount is less than zero, otherwise false.
-func (t *TotalAmount) LessThanZero() bool {
-	return t.Cents < 0
-}
-
 // String returns a string representation of the TotalAmount, formatted as a decimal with two decimal places.
 func (t TotalAmount) String() string {
 	return fmt.Sprintf("%.2f", float64(t.Cents)/100)

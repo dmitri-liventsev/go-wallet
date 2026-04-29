@@ -12,21 +12,6 @@ type Amount struct {
 	Cents int
 }
 
-// Inverse returns a new Amount with the value inverted.
-func (a Amount) Inverse() Amount {
-	return NewAmount(-a.Cents)
-}
-
-// IsZero check at amount are zero
-func (a Amount) IsZero() bool {
-	return a.Cents == 0
-}
-
-// Add returns a new Amount which is the sum of the current amount and the given amount.
-func (a *Amount) Add(amount Amount) Amount {
-	return NewAmount(a.Cents + amount.Cents)
-}
-
 // Equal returns true if the current amount is equal to the given amount, otherwise false.
 func (a *Amount) Equal(amount Amount) bool {
 	return a.Cents == amount.Cents

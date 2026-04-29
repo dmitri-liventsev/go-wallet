@@ -1,12 +1,10 @@
 package entities
 
 import (
-	"encoding/json"
 	"time"
 	"wallet/transaction/internal/domain/vo"
 
 	"github.com/google/uuid"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 // Win action.
@@ -53,18 +51,9 @@ type Transaction struct {
 	UpdatedAt  time.Time  `gorm:"type:timestamptz;default:current_timestamp"`
 }
 
-func (t Transaction) ToJSON() (string, error) {
-	jsonData, err := json.Marshal(t)
-	if err != nil {
-		return "", err
-	}
-	return string(jsonData), nil
-}
-
 // MarkAsDone mark Transaction as done.
 func (t *Transaction) MarkAsDone() {
 	t.Status = Done
-	//t.LockUuid = nil
 }
 
 // MarkAsCancelled mark Transaction as cancelled
@@ -72,15 +61,10 @@ func (t *Transaction) MarkAsCancelled() {
 	t.Status = Cancelled
 }
 
+// IsInternal returns true if the transaction originates from an internal source,
+// bypassing the negative-balance check in the processor.
 func (t *Transaction) IsInternal() bool {
-	return t.Status == Internal
-}
-
-// Lock book transaction by worker process
-func (t *Transaction) Lock(lockUuid uuid.UUID) {
-	t.Status = Locked
-	t.LockUuid = &lockUuid
-	*t.LockedAt = time.Now()
+	return t.SourceType == Internal
 }
 
 // NewTransaction returns new Transaction entity.

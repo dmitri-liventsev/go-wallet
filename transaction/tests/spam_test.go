@@ -82,7 +82,7 @@ func generatePayloads(limit int) ([]*wallet.CreateTransactionPayload, int64) {
 				expectedBalance -= 10
 			}
 
-			amount = "-10"
+			amount = "10"
 		} else {
 			expectedBalance += 10
 		}

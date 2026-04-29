@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -223,7 +224,7 @@ func createTx(txID string, userID uint64, amount float64, host string) (int, err
 
 	payload := map[string]string{
 		"state":         state,
-		"amount":        fmt.Sprintf("%.2f", amount),
+		"amount":        fmt.Sprintf("%.2f", math.Abs(amount)),
 		"userID":        strconv.FormatUint(userID, 10),
 		"transactionId": txID,
 	}

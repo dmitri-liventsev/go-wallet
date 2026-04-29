@@ -63,28 +63,14 @@ var _ = Describe("transaction management", func() {
 		})
 
 		When("a signal to create a lose transaction with positive amount is received", func() {
-			var err error
 			BeforeEach(func(ctx context.Context) {
 				payload.Amount = "10.01"
-				payload.State = entities.Lost
-				err = client.CreateTransaction(ctx, payload)
-
-			})
-
-			It("error should return", func() {
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
-		When("a signal to create a transaction with negative amount is received", func() {
-			BeforeEach(func(ctx context.Context) {
-				payload.Amount = "-10.01"
 				payload.State = entities.Lost
 				err := client.CreateTransaction(ctx, payload)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should save transaction data correctly", func(ctx context.Context) {
+			It("should save transaction data with negated amount", func(ctx context.Context) {
 				transaction, err := repo.GetNextTransaction(ctx)
 
 				Expect(transaction).ToNot(BeNil())
@@ -95,6 +81,19 @@ var _ = Describe("transaction management", func() {
 				Expect(transaction.Status).To(Equal(entities.New))
 				Expect(transaction.Action).To(Equal(payload.State))
 				Expect(transaction.SourceType).To(Equal(payload.SourceType))
+			})
+		})
+
+		When("a signal to create a lose transaction with negative amount is received", func() {
+			var err error
+			BeforeEach(func(ctx context.Context) {
+				payload.Amount = "-10.01"
+				payload.State = entities.Lost
+				err = client.CreateTransaction(ctx, payload)
+			})
+
+			It("error should return", func() {
+				Expect(err).To(HaveOccurred())
 			})
 		})
 

@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,9 +25,10 @@ type Balance struct {
 	Amount float64
 }
 
+var serverList []string
+
 func getRandomServer() string {
-	servers := []string{"localhost:8081", "localhost:8082"}
-	return servers[rand.Intn(len(servers))]
+	return serverList[rand.Intn(len(serverList))]
 }
 
 type Job struct {
@@ -47,6 +49,24 @@ func worker(wg *sync.WaitGroup, jobs <-chan Job, results chan<- error) {
 
 		results <- err
 	}
+}
+
+// waitForProcessing polls until no transactions remain in 'new' or 'locked' state,
+// or until the deadline is reached.
+func waitForProcessing(db *sql.DB) {
+	deadline := time.Now().Add(60 * time.Second)
+	for time.Now().Before(deadline) {
+		var pending int64
+		if err := db.QueryRow("SELECT COUNT(*) FROM transactions WHERE status IN ('new', 'locked')").Scan(&pending); err != nil {
+			log.Printf("poll error: %v", err)
+		} else if pending == 0 {
+			return
+		} else {
+			fmt.Printf("waiting: %d transactions still pending...\n", pending)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	log.Println("timeout: some transactions may still be unprocessed")
 }
 
 // initUserBalance ensures a balance row exists for the user.
@@ -86,12 +106,16 @@ func initUserBalance(db *sql.DB, userID uint64) int64 {
 func main() {
 	numOfTransactions := flag.Int("numOfTransactions", 1000, "number of transactions to send")
 	numWorkers := flag.Int("numWorkers", 20, "number of concurrent workers")
+	connStr := flag.String("connStr", "user=postgres password=password dbname=txdb host=localhost port=5432 sslmode=disable", "PostgreSQL connection string")
+	servers := flag.String("servers", "localhost:8081,localhost:8082", "comma-separated list of server addresses")
 	flag.Parse()
 
-	rand.Seed(time.Now().UnixNano())
+	serverList = strings.Split(*servers, ",")
 
-	connStr := "user=postgres password=password dbname=txdb host=localhost port=5432 sslmode=disable"
-	db, err := sql.Open("pgx", connStr)
+	rand.Seed(time.Now().UnixNano())
+	runStart := time.Now()
+
+	db, err := sql.Open("pgx", *connStr)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -120,16 +144,11 @@ func main() {
 	}
 
 	for i := 0; i < *numOfTransactions; i++ {
-		userId := users[rand.Intn(len(users))]
-
-		intNum := rand.Intn(2001) - 1000
-		floatNum := float64(intNum)
-		amount := floatNum / 100
-
-		expected[userId] += floatNum
+		userID := users[rand.Intn(len(users))]
+		amount := float64(rand.Intn(2001)-1000) / 100
 
 		jobs <- Job{
-			UserID: userId,
+			UserID: userID,
 			Amount: amount,
 		}
 	}
@@ -145,23 +164,54 @@ func main() {
 		}
 	}
 
-	time.Sleep(3 * time.Second)
+	waitForProcessing(db)
 
 	// -------------------------
 	// validate results
 	// -------------------------
-	for _, userId := range users {
-		var final int64
-		err := db.QueryRow("SELECT value FROM balances WHERE user_id=$1", userId).Scan(&final)
-		if err != nil {
-			log.Fatalf("failed to get balance: %v", err)
+	ok := true
+	for _, userID := range users {
+		initial := int64(expected[userID])
+
+		var finalBalance int64
+		if err := db.QueryRow("SELECT value FROM balances WHERE user_id=$1", userID).Scan(&finalBalance); err != nil {
+			log.Fatalf("failed to get balance for user %d: %v", userID, err)
 		}
 
-		fmt.Printf("User %d final balance: %.2f | expected: %.2f\n",
-			userId,
-			float64(final)/100,
-			expected[userId]/100,
+		var doneSum int64
+		if err := db.QueryRow(
+			"SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id=$1 AND status='done' AND created_at >= $2",
+			userID, runStart,
+		).Scan(&doneSum); err != nil {
+			log.Fatalf("failed to get done sum for user %d: %v", userID, err)
+		}
+
+		var cancelledCount int64
+		db.QueryRow(
+			"SELECT COUNT(*) FROM transactions WHERE user_id=$1 AND status='cancelled' AND created_at >= $2",
+			userID, runStart,
+		).Scan(&cancelledCount)
+
+		computedBalance := initial + doneSum
+		status := "OK"
+		if finalBalance != computedBalance {
+			status = "MISMATCH"
+			ok = false
+		}
+
+		fmt.Printf("User %d: balance=%.2f | computed=%.2f | cancelled=%d | %s\n",
+			userID,
+			float64(finalBalance)/100,
+			float64(computedBalance)/100,
+			cancelledCount,
+			status,
 		)
+	}
+
+	if ok {
+		fmt.Println("All balances match.")
+	} else {
+		fmt.Println("BALANCE MISMATCH DETECTED.")
 	}
 }
 

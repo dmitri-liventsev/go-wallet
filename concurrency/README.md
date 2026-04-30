@@ -1,56 +1,49 @@
 
 # Concurrency Test Utility
 
-This is a small test utility designed to verify the concurrency handling of a parent application. It simulates multiple transactions being processed simultaneously to ensure that the application manages concurrent requests properly.
+A small stress-test tool that fires concurrent transactions at the wallet application and then verifies that every balance is mathematically consistent.
 
 ## Overview
 
-The utility performs the following steps:
-1. **Initial Balance Check**: Fetches the current balance from the application.
-2. **Transaction Generation**: Generates a list of transactions to be sent to the application.
-3. **Expected Balance Calculation**: Calculates the expected balance after all transactions, assuming no transaction cancellation due to a negative balance.
-4. **Execution**: Sends the generated transactions to the application using multiple concurrent workers.
-5. **Comparison**: Compares the expected balance with the actual balance after all transactions have been processed, displaying both results.
+1. **Balance initialisation** — for each of the three test users (IDs 1, 2, 3) the tool ensures a balance row exists in the database. If no row is found it inserts one with a starting value of 1 000.00.
+2. **Transaction flood** — `numOfTransactions` jobs are distributed across `numWorkers` goroutines. Each job picks a random user and a random amount between -10.00 and +10.00 and posts it to a random server.
+3. **Wait for processing** — polls `transactions` every 500 ms until no rows remain in `new` or `locked` state (60-second deadline).
+4. **Validation** — for each user computes `initial_balance + SUM(amount WHERE status = 'done')` and compares it to the current value in `balances`. Cancelled transactions are counted and shown but do not affect the expected balance.
 
 ## Prerequisites
 
-Before using this utility, ensure that the application is running on the host machine using Docker. You need to start the application containers with `docker-compose up`. Once the application is running, you can build and run this utility from the host machine.
+Start the application with Docker before running the tool:
 
-## Configuration
+```bash
+docker-compose up
+```
 
-You can configure the utility by modifying the following constants in the source code:
-
-- **`numWorkers`**: The number of concurrent workers that will send requests to the servers.
-- **`numOfTransactions`**: The number of transactions that will be sent to the servers.
-- **`servers`**: A list of host instances where the application is running.
-
-### Sample:
+## Running
 
 ```bash
 go run main.go \
---numOfTransactions=1000 \
---numWorkers=20 \
---connStr="user=postgres password=password dbname=txdb host=localhost port=5432 sslmode=disable" \
---servers="localhost:8081,localhost:8082"
-````
+  --numOfTransactions=1000 \
+  --numWorkers=20 \
+  --connStr="user=postgres password=password dbname=txdb host=localhost port=5432 sslmode=disable" \
+  --servers="localhost:8081,localhost:8082"
+```
 
-## Important Notes
-
-- **Correction Process**: The application has a built-in correction mechanism that runs every 10 minutes. This utility does not track these corrections, so the expected and actual balances may differ if a correction occurs during the test run.
-
-- **Transaction Anomalies**: If there is a discrepancy between the expected and actual balances, verify the transactions. Look for transactions with `source_type = Internal` or transactions marked with `status = cancelled`, as these could indicate where the correction process has intervened.
+| Flag | Default | Description |
+|---|---|---|
+| `--numOfTransactions` | 1000 | Total number of transactions to send |
+| `--numWorkers` | 20 | Number of concurrent goroutines |
+| `--connStr` | *(local postgres)* | PostgreSQL connection string for validation queries |
+| `--servers` | `localhost:8081,localhost:8082` | Comma-separated list of application instances |
 
 ## Example Output
 
-After running the utility, you might see output like this:
-
-```json5
-Expected Balance: 157924.00
-Final Balance in Database: 157924.00
+```
+waiting: 312 transactions still pending...
+waiting: 58 transactions still pending...
+User 1: balance=983.41 | computed=983.41 | cancelled=14 | OK
+User 2: balance=1047.20 | computed=1047.20 | cancelled=9  | OK
+User 3: balance=999.75 | computed=999.75 | cancelled=21 | OK
+All balances match.
 ```
 
-This output indicates a slight difference between the expected and actual balances, possibly due to the application's correction process.
-
-## Conclusion
-
-This utility is a helpful tool for testing the concurrency capabilities of your application. By simulating multiple simultaneous transactions, it helps ensure that your application can handle concurrent requests without issues.
+`balance` is the raw value from the `balances` table; `computed` is derived purely from `done` transactions. A `MISMATCH` line means a concurrency or atomicity bug was detected.

@@ -2,8 +2,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS balances (
     id      UUID    PRIMARY KEY,
-    user_id BIGINT  NOT NULL UNIQUE,
+    user_id BIGINT  NOT NULL,
     value   BIGINT  NOT NULL DEFAULT 0
+    CONSTRAINT uni_balances_user_id UNIQUE (user_id)
 );
 
 INSERT INTO balances (id, user_id, value)

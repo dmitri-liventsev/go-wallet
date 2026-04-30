@@ -18,6 +18,14 @@ Start the application with Docker before running the tool:
 docker-compose up
 ```
 
+## Known Limitation: Transaction Order
+
+Because transactions are dispatched concurrently across multiple goroutines and servers, **the order in which the server receives and processes them is non-deterministic**. The `computed` balance is calculated locally in generation order, which will differ from the server's actual processing order.
+
+As a result, when a user's balance is close to zero, we cannot reliably predict which transactions the server will cancel — the server may cancel a different set than the ones we skipped locally, causing a `MISMATCH` that is **not a concurrency bug**.
+
+> **Recommendation:** set the initial balance high enough that no transaction can drive it negative during the test run. A value of **10 000.00** is sufficient for the default 1 000 transactions with amounts up to ±10.00.
+
 ## Running
 
 ```bash

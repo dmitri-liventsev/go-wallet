@@ -49,6 +49,28 @@ services:
       db:
         condition: service_healthy
 
+  web3:
+    build:
+      context: .
+      dockerfile: transaction/cmd/Dockerfile
+    container_name: web3
+    volumes:
+      - .:/app
+    command: ["air"]
+    environment:
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=txdb
+      - DB_HOST=db
+      - DB_PORT=5432
+    ports:
+      - "8083:8080"
+    depends_on:
+      web1:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:13
     container_name: db
